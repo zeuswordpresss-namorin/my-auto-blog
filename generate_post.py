@@ -45,7 +45,7 @@ QUEUE_FILE = "keywords_queue.json"
 
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.5-flash:generateContent?key={api_key}"
+    "gemini-2.0-flash:generateContent?key={api_key}"
 )
 
 SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가입니다. 아래 규칙을 지켜 작성하세요:
@@ -152,23 +152,34 @@ def generate_article(title: str) -> dict:
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
         "contents": [{"role": "user", "parts": [{"text": f"제목: '{title}' 에 대한 블로그 글을 작성해주세요."}]}],
     }
-    resp = requests.post(url, json=payload, timeout=60)
-    resp.raise_for_status()
-    data = resp.json()
 
-    try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError):
-        raise ValueError(f"Gemini 응답 형식이 예상과 다릅니다: {json.dumps(data, ensure_ascii=False)[:400]}")
+    import time
+    last_error = None
+    for attempt in range(1, 4):  # 429/503 같은 일시적 오류는 최대 3번까지 자동 재시도
+        try:
+            resp = requests.post(url, json=payload, timeout=60)
+            if resp.status_code in (429, 503):
+                wait = 15 * attempt
+                print(f"  → 일시적 오류({resp.status_code}), {wait}초 대기 후 재시도 ({attempt}/3)")
+                time.sleep(wait)
+                last_error = f"{resp.status_code} 오류 반복됨"
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            article = json.loads(cleaned)
+            article["keyword"] = title
+            return article
+        except (KeyError, IndexError) as e:
+            raise ValueError(f"Gemini 응답 형식이 예상과 다릅니다: {e}")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"AI 응답을 JSON으로 해석하지 못했습니다: {e}")
+        except requests.exceptions.RequestException as e:
+            last_error = str(e)
+            time.sleep(10)
 
-    cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    try:
-        article = json.loads(cleaned)
-    except json.JSONDecodeError:
-        raise ValueError(f"AI 응답을 JSON으로 해석하지 못했습니다. 원본:\n{text[:500]}")
-
-    article["keyword"] = title
-    return article
+    raise RuntimeError(f"3번 시도했지만 계속 실패했습니다: {last_error}")
 
 
 def _load_font(size):
