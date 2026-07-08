@@ -1,40 +1,58 @@
 # -*- coding: utf-8 -*-
 """
-GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트.
-로컬 PC나 스마트폰에서 직접 실행하는 스크립트가 아니라,
-.github/workflows/auto_blog.yml 이 GitHub 서버에서 대신 실행해줍니다.
-(그래서 안드로이드폰에서도 "실행 버튼"만 누르면 관리가 가능합니다)
+GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v3 - 업그레이드판)
 
-동작:
-  1. 제목을 실행 인자로 받거나 (수동 실행 시), 없으면 keywords_queue.json에서
-     다음 키워드를 하나 꺼내 씁니다 (예약 자동 실행 시).
-  2. Gemini 무료 API로 글 생성
-  3. Pillow로 Gemini스타일 그라데이션 썸네일 생성
-  4. 쿠팡 마크업(제휴) 링크 삽입
-  5. docs/posts/ 에 HTML 파일로 저장, docs/index.html 목록 갱신
-     (실제 git commit/push는 워크플로 파일이 담당합니다)
+v2에서 추가된 것:
+  1. 쿠팡 마크업(제휴) 링크 실전 업그레이드
+     - 쿠팡파트너스 Open API(HMAC 서명) 딥링크 발급 시도
+     - API 키 미설정/실패 시 기존 태그 방식 검색 링크로 자동 대체 (항상 동작 보장)
+  2. 상위노출(SEO) 강화
+     - Open Graph / Twitter Card 메타태그, canonical URL
+     - sitemap.xml / robots.txt 매 실행마다 자동 갱신
+  3. 수익화 피드백 관리
+     - Google Analytics 4(GA4) 추적 코드 삽입 (측정 ID 설정 시)
+     - docs/dashboard.html : 지금까지 발행된 글 + 확인 링크 모음 (폰에서 보는 성과 관리 화면)
+
+v3에서 추가된 것:
+  4. AI 스키마 마크업 자동 선택
+     - Gemini가 글 내용을 보고 FAQPage / HowTo / Article 중 구글 상위노출에
+       가장 유리한 구조화 데이터 타입을 스스로 골라 JSON-LD로 생성 (수동 선택 불필요)
+  5. 구글 애드센스 자동광고 연동 (전면/앵커 광고 포함)
+     - ADSENSE_CLIENT_ID 설정 시 자동광고 스크립트 삽입, 실제 광고 형식/노출 빈도는
+       애드센스 사이트의 "자동 광고" 메뉴에서 On/Off
+  6. 대시보드에 애드센스 수익 확인 카드 추가
 """
 
+import hashlib
+import hmac
 import io
 import json
 import os
 import re
 import sys
 import textwrap
+import time
+import urllib.parse
 from datetime import datetime
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
 # =====================================================================
-# 환경변수로 받는 설정값 (GitHub 저장소 Secrets에서 자동 주입됨)
+# 환경변수로 받는 설정값 (GitHub 저장소 Secrets / Variables에서 자동 주입됨)
 # =====================================================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-COUPANG_PARTNER_TAG = os.environ.get("COUPANG_PARTNER_TAG", "")
 SITE_TITLE = os.environ.get("SITE_TITLE", "내 자동 블로그")
+SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")  # 예: https://아이디.github.io/my-auto-blog
+GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "")  # 예: G-XXXXXXXXXX
+ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")  # 예: ca-pub-1234567890123456
+
+COUPANG_PARTNER_TAG = os.environ.get("COUPANG_PARTNER_TAG", "")
+COUPANG_ACCESS_KEY = os.environ.get("COUPANG_ACCESS_KEY", "")
+COUPANG_SECRET_KEY = os.environ.get("COUPANG_SECRET_KEY", "")
 
 FONT_CANDIDATES = [
-    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",  # 워크플로에서 apt로 설치함
+    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
     "font.ttf",
 ]
 
@@ -45,18 +63,106 @@ QUEUE_FILE = "keywords_queue.json"
 
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent?key={api_key}"
+    "gemini-2.5-flash:generateContent?key={api_key}"
 )
 
-SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가입니다. 아래 규칙을 지켜 작성하세요:
+SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조화 데이터(스키마 마크업) 전문가입니다.
+아래 규칙을 지켜 작성하세요:
 1. 제목은 검색 의도를 반영하되 과장/낚시성 표현은 피한다.
 2. 소제목(H2)을 4~6개 사용해 구조화한다.
 3. 확인되지 않은 구체적 수치·통계를 지어내지 않는다.
 4. 글자 수는 1500~2200자 내외.
 5. 자연스러운 위치에 제품 추천 문맥을 1곳 만든다 (실제 링크는 넣지 않음).
-6. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
-{"title": "...", "html_body": "...", "meta_description": "..."}
+6. 콘텐츠 내용을 보고 아래 3가지 중 구글 상위노출에 가장 유리한 스키마 타입을 스스로 판단해서 고른다:
+   - "FAQPage": 자주 묻는 질문/답변 형태로 정리하기 좋은 주제일 때 (예: "~란?", "~ 방법", "~ 차이" 등 질의응답형 검색의도)
+   - "HowTo": 순서가 있는 절차/방법을 안내하는 주제일 때 (예: "~하는 법", "~ 설치 방법")
+   - "Article": 위 둘에 해당하지 않는 일반 정보/추천/리뷰형 글일 때
+7. 고른 스키마 타입에 맞는 데이터를 함께 채운다:
+   - FAQPage를 골랐다면 "faq_items"에 실제 본문 내용과 일치하는 질문/답변 3~5개를 넣는다 (본문에도 자연스럽게 Q&A 형태로 녹여쓴다)
+   - HowTo를 골랐다면 "howto_steps"에 실제 본문 순서와 일치하는 단계 3~6개를 넣는다 (각 step은 name(단계 제목)과 text(설명))
+   - Article이면 faq_items, howto_steps는 빈 배열로 둔다
+8. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
+{
+  "title": "...",
+  "html_body": "...",
+  "meta_description": "...",
+  "schema_type": "Article 또는 FAQPage 또는 HowTo",
+  "faq_items": [{"question": "...", "answer": "..."}],
+  "howto_steps": [{"name": "...", "text": "..."}]
+}
 html_body는 <h2>, <p>, <ul> 등을 사용한 HTML 조각이어야 한다."""
+
+
+def _ga_snippet() -> str:
+    if not GA_MEASUREMENT_ID:
+        return ""
+    return f"""
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+  gtag('js', new Date());
+  gtag('config', '{GA_MEASUREMENT_ID}');
+</script>"""
+
+
+def _adsense_snippet() -> str:
+    """구글 애드센스 자동광고 스크립트. 이 한 줄만 있으면 배너/전면(interstitial)/앵커 광고를
+    구글이 페이지 내용에 맞게 자동으로 배치합니다 (실제 On/Off 및 광고 형식 세부설정은
+    애드센스 사이트의 '자동 광고' 메뉴에서 합니다)."""
+    if not ADSENSE_CLIENT_ID:
+        return ""
+    return (
+        f'\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
+        f'?client={ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>'
+    )
+
+
+def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str) -> str:
+    """AI가 고른 스키마 타입(schema_type)에 맞춰 JSON-LD 구조화 데이터를 만듭니다."""
+    schema_type = article.get("schema_type", "Article")
+    title = article["title"]
+    meta_description = article.get("meta_description", "")
+
+    if schema_type == "FAQPage" and article.get("faq_items"):
+        data = {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": qa.get("question", ""),
+                    "acceptedAnswer": {"@type": "Answer", "text": qa.get("answer", "")},
+                }
+                for qa in article["faq_items"]
+            ],
+        }
+    elif schema_type == "HowTo" and article.get("howto_steps"):
+        data = {
+            "@context": "https://schema.org",
+            "@type": "HowTo",
+            "name": title,
+            "description": meta_description,
+            "step": [
+                {"@type": "HowToStep", "name": s.get("name", ""), "text": s.get("text", "")}
+                for s in article["howto_steps"]
+            ],
+        }
+    else:
+        schema_type = "Article"
+        data = {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": title,
+            "description": meta_description,
+            "image": thumb_url,
+            "datePublished": date,
+            "author": {"@type": "Organization", "name": SITE_TITLE},
+        }
+
+    print(f"  → [스키마 마크업] AI가 선택한 타입: {schema_type}")
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
 
 POST_TEMPLATE = """<!DOCTYPE html>
 <html lang="ko">
@@ -65,6 +171,19 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title}</title>
 <meta name="description" content="{meta_description}">
+<link rel="canonical" href="{canonical_url}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{meta_description}">
+<meta property="og:image" content="{thumb_url}">
+<meta property="og:url" content="{canonical_url}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{meta_description}">
+<meta name="twitter:image" content="{thumb_url}">
+<script type="application/ld+json">
+{json_ld}
+</script>{ga_snippet}{adsense_snippet}
 <style>
   body {{ max-width: 720px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, sans-serif; line-height: 1.7; color: #222; }}
   h1 {{ font-size: 1.8em; }}
@@ -89,6 +208,8 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{site_title}</title>
+<meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
+<link rel="canonical" href="{site_url}/">{ga_snippet}{adsense_snippet}
 <style>
   body {{ max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, sans-serif; }}
   h1 {{ font-size: 1.8em; }}
@@ -98,15 +219,83 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   a:hover {{ color: #4a90d9; }}
   img {{ width: 100%; border-radius: 8px; display:block; margin-bottom: 8px; }}
   .date {{ color: #999; font-size: 0.85em; }}
+  .dash-link {{ float:right; font-size:0.8em; color:#4a90d9; }}
 </style>
 </head>
 <body>
-<h1>{site_title}</h1>
+<h1>{site_title} <a class="dash-link" href="dashboard.html">성과관리 →</a></h1>
 <ul>
 {items}
 </ul>
 </body>
 </html>
+"""
+
+DASHBOARD_TEMPLATE = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>성과 관리 - {site_title}</title>
+<style>
+  body {{ max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, sans-serif; color:#222; }}
+  h1 {{ font-size: 1.5em; }}
+  h2 {{ font-size: 1.1em; margin-top: 2em; }}
+  table {{ width: 100%; border-collapse: collapse; font-size: 0.9em; }}
+  th, td {{ text-align: left; padding: 8px 4px; border-bottom: 1px solid #eee; }}
+  a {{ color: #4a90d9; }}
+  .card {{ background:#f7f7f9; border-radius:8px; padding:16px; margin: 10px 0; }}
+  a.back {{ display: inline-block; margin-bottom: 20px; color: #4a90d9; text-decoration: none; }}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← 블로그로</a>
+<h1>📊 성과 관리 대시보드</h1>
+
+<div class="card">
+  <b>실시간 트래픽 확인 (GA4)</b><br>
+  플레이스토어 "Google Analytics" 앱 설치 후 이 사이트의 방문자/인기글을 확인하세요.<br>
+  <a href="https://analytics.google.com" target="_blank">analytics.google.com 바로가기</a>
+</div>
+
+<div class="card">
+  <b>수익(쿠팡 마크업 수수료) 확인</b><br>
+  쿠팡파트너스 앱 또는 사이트에서 클릭수/수익을 확인하세요.<br>
+  <a href="https://partners.coupang.com" target="_blank">partners.coupang.com 바로가기</a>
+</div>
+
+<div class="card">
+  <b>광고 수익(애드센스) 확인</b><br>
+  플레이스토어 "Google AdSense" 앱 설치 후 페이지뷰/광고 수익(전면광고 포함)을 확인하세요.<br>
+  <a href="https://www.google.com/adsense" target="_blank">adsense.google.com 바로가기</a>
+</div>
+
+<div class="card">
+  <b>검색 노출 확인 (Google Search Console)</b><br>
+  사이트가 구글 검색에 얼마나 노출/클릭되는지 확인하세요. 최초 1회 소유권 인증이 필요합니다.<br>
+  <a href="https://search.google.com/search-console" target="_blank">search.google.com/search-console 바로가기</a>
+</div>
+
+<h2>발행된 글 목록 ({post_count}개)</h2>
+<table>
+<tr><th>날짜</th><th>제목</th><th>바로가기</th></tr>
+{rows}
+</table>
+</body>
+</html>
+"""
+
+SITEMAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url><loc>{site_url}/</loc></url>
+{url_entries}
+</urlset>
+"""
+
+ROBOTS_TXT = """User-agent: *
+Allow: /
+
+Sitemap: {site_url}/sitemap.xml
 """
 
 GEMINI_GRADIENT_COLORS = [(66, 133, 244), (156, 39, 176), (234, 67, 121)]
@@ -119,7 +308,6 @@ def slugify(text: str) -> str:
 
 
 def get_title_from_args_or_queue() -> str:
-    """실행 인자로 받은 제목이 있으면 그걸 쓰고, 없으면 큐에서 하나 꺼냅니다."""
     if len(sys.argv) > 1 and sys.argv[1].strip():
         return sys.argv[1].strip()
 
@@ -153,9 +341,8 @@ def generate_article(title: str) -> dict:
         "contents": [{"role": "user", "parts": [{"text": f"제목: '{title}' 에 대한 블로그 글을 작성해주세요."}]}],
     }
 
-    import time
     last_error = None
-    for attempt in range(1, 4):  # 429/503 같은 일시적 오류는 최대 3번까지 자동 재시도
+    for attempt in range(1, 4):
         try:
             resp = requests.post(url, json=payload, timeout=60)
             if resp.status_code in (429, 503):
@@ -227,16 +414,48 @@ def generate_thumbnail(title: str, output_path: str) -> None:
     img.save(output_path, quality=90)
 
 
+def _coupang_deeplink(search_url: str):
+    """쿠팡파트너스 Open API로 실제 수수료가 붙는 딥링크를 발급받습니다. 실패 시 None."""
+    if not (COUPANG_ACCESS_KEY and COUPANG_SECRET_KEY):
+        return None
+
+    domain = "https://api-gateway.coupang.com"
+    path = "/v2/providers/affiliate_open_api/apis/openapi/v1/deeplink"
+    try:
+        query = urllib.parse.urlencode({"coupangUrls": search_url})
+        path_with_query = f"{path}?{query}"
+        datetime_str = time.strftime("%y%m%dT%H%M%SZ", time.gmtime())
+        message = datetime_str + "GET" + path_with_query
+        signature = hmac.new(COUPANG_SECRET_KEY.encode(), message.encode(), hashlib.sha256).hexdigest()
+        auth_header = (
+            f"CEA algorithm=HmacSHA256, access-key={COUPANG_ACCESS_KEY}, "
+            f"signed-date={datetime_str}, signature={signature}"
+        )
+        resp = requests.get(
+            domain + path_with_query,
+            headers={"Authorization": auth_header, "Content-Type": "application/json"},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        return resp.json()["data"][0]["shortenUrl"]
+    except Exception as e:
+        print(f"  → [쿠팡 딥링크] 발급 실패, 일반 링크로 대체: {e}")
+        return None
+
+
 def add_coupang_markup(article: dict) -> dict:
-    import urllib.parse
     keyword = article["keyword"]
     search_url = f"https://www.coupang.com/np/search?q={urllib.parse.quote(keyword)}"
     if COUPANG_PARTNER_TAG:
         search_url += f"&lptag={COUPANG_PARTNER_TAG}"
 
+    link = _coupang_deeplink(search_url) or search_url
+    link_type = "쿠팡파트너스 딥링크" if link != search_url else "일반 검색 링크"
+    print(f"  → 마크업 링크 방식: {link_type}")
+
     extra_html = (
         f'<h2>관련 추천 상품</h2>'
-        f'<p><a href="{search_url}" target="_blank" rel="nofollow sponsored">{keyword} 관련 인기 상품 보러가기</a></p>'
+        f'<p><a href="{link}" target="_blank" rel="nofollow sponsored">{keyword} 관련 인기 상품 보러가기</a></p>'
         '<p style="font-size:0.85em;color:#888;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, '
         '이에 따른 일정액의 수수료를 제공받습니다.</p>'
     )
@@ -255,20 +474,32 @@ def save_post(article: dict) -> dict:
 
     generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename))
 
+    post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
+    thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
+
+    title = article["title"]
+    meta_description = article.get("meta_description", "")
+    json_ld = build_json_ld(article, post_url, thumb_url, today)
+
     html = POST_TEMPLATE.format(
-        title=article["title"],
-        meta_description=article.get("meta_description", ""),
+        title=title,
+        meta_description=meta_description,
         date=today,
         html_body=article["html_body"],
         thumb_filename=thumb_filename,
+        canonical_url=post_url,
+        thumb_url=thumb_url,
+        json_ld=json_ld,
+        ga_snippet=_ga_snippet(),
+        adsense_snippet=_adsense_snippet(),
     )
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
 
-    return {"title": article["title"], "file": f"posts/{post_filename}", "thumb": f"thumbs/{thumb_filename}", "date": today}
+    return {"title": title, "file": f"posts/{post_filename}", "thumb": f"thumbs/{thumb_filename}", "date": today}
 
 
-def update_index(new_post: dict) -> None:
+def update_index(new_post: dict) -> list:
     os.makedirs(DOCS_DIR, exist_ok=True)
     posts = []
     if os.path.exists(POSTS_JSON):
@@ -285,7 +516,36 @@ def update_index(new_post: dict) -> None:
         for p in posts
     )
     with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
-        f.write(INDEX_TEMPLATE.format(site_title=SITE_TITLE, items=items))
+        f.write(INDEX_TEMPLATE.format(
+            site_title=SITE_TITLE, items=items,
+            site_url=SITE_URL or ".", ga_snippet=_ga_snippet(),
+            adsense_snippet=_adsense_snippet(),
+        ))
+
+    return posts
+
+
+def update_dashboard(posts: list) -> None:
+    rows = "\n".join(
+        f'<tr><td>{p["date"]}</td><td>{p["title"]}</td><td><a href="{p["file"]}">보기</a></td></tr>'
+        for p in posts
+    )
+    with open(os.path.join(DOCS_DIR, "dashboard.html"), "w", encoding="utf-8") as f:
+        f.write(DASHBOARD_TEMPLATE.format(site_title=SITE_TITLE, post_count=len(posts), rows=rows))
+
+
+def update_seo_files(posts: list) -> None:
+    """SEO용 sitemap.xml / robots.txt를 매번 최신 글 목록 기준으로 갱신합니다."""
+    if not SITE_URL:
+        print("  → [SEO] SITE_URL이 설정되지 않아 sitemap.xml/robots.txt 생성을 건너뜁니다.")
+        return
+
+    url_entries = "\n".join(f"<url><loc>{SITE_URL}/{p['file']}</loc></url>" for p in posts)
+    with open(os.path.join(DOCS_DIR, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write(SITEMAP_TEMPLATE.format(site_url=SITE_URL, url_entries=url_entries))
+
+    with open(os.path.join(DOCS_DIR, "robots.txt"), "w", encoding="utf-8") as f:
+        f.write(ROBOTS_TXT.format(site_url=SITE_URL))
 
 
 def run():
@@ -297,9 +557,12 @@ def run():
 
     article = add_coupang_markup(article)
     post_meta = save_post(article)
-    update_index(post_meta)
+    posts = update_index(post_meta)
+    update_dashboard(posts)
+    update_seo_files(posts)
 
     print(f"  → 저장 완료: docs/{post_meta['file']}, docs/{post_meta['thumb']}")
+    print(f"  → 대시보드/사이트맵 갱신 완료")
 
 
 if __name__ == "__main__":
