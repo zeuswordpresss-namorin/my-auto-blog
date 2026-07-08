@@ -40,8 +40,13 @@ jobs:
       - name: 블로그 글 + 썸네일 자동 생성
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          COUPANG_PARTNER_TAG: ${{ secrets.COUPANG_PARTNER_TAG }}
           SITE_TITLE: ${{ vars.SITE_TITLE }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
+          ADSENSE_CLIENT_ID: ${{ vars.ADSENSE_CLIENT_ID }}
+          COUPANG_PARTNER_TAG: ${{ secrets.COUPANG_PARTNER_TAG }}
+          COUPANG_ACCESS_KEY: ${{ secrets.COUPANG_ACCESS_KEY }}
+          COUPANG_SECRET_KEY: ${{ secrets.COUPANG_SECRET_KEY }}
         run: python generate_post.py "${{ github.event.inputs.title }}"
 
       - name: 변경사항 커밋 및 push
