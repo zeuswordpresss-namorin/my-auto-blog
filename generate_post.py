@@ -45,7 +45,7 @@ QUEUE_FILE = "keywords_queue.json"
 
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent?key={api_key}"
+    "gemini-1.5-flash:generateContent?key={api_key}"
 )
 
 SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가입니다. 아래 규칙을 지켜 작성하세요:
