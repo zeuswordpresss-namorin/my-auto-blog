@@ -1,0 +1,62 @@
+name: 자동 블로그 발행
+
+# 실행 방법 2가지:
+# 1) workflow_dispatch: GitHub 웹사이트(모바일 브라우저 포함)에서
+#    Actions 탭 > "자동 블로그 발행" > "Run workflow" 버튼으로 수동 실행.
+#    이때 "title" 칸에 제목을 입력하면 그 제목으로, 비워두면 큐에서 자동으로 하나 꺼내 씁니다.
+# 2) schedule: 매일 정해진 시각에 자동 실행 (큐에서 자동으로 다음 키워드 사용)
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: "블로그 제목 (비워두면 큐에서 자동으로 하나 사용)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 0 * * *"   # 매일 UTC 00:00 = 한국시간 오전 9시
+
+permissions:
+  contents: write   # docs 폴더 변경사항을 저장소에 push 하기 위해 필요
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 무료 한글 폰트 설치 (나눔고딕)
+        run: sudo apt-get update && sudo apt-get install -y fonts-nanum
+
+      - name: 필요 패키지 설치
+        run: pip install requests pillow
+
+      - name: 블로그 글 + 썸네일 자동 생성 (+ 블로거 동시발행)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SITE_TITLE: ${{ vars.SITE_TITLE }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
+          ADSENSE_CLIENT_ID: ${{ vars.ADSENSE_CLIENT_ID }}
+          COUPANG_PARTNER_TAG: ${{ secrets.COUPANG_PARTNER_TAG }}
+          COUPANG_ACCESS_KEY: ${{ secrets.COUPANG_ACCESS_KEY }}
+          COUPANG_SECRET_KEY: ${{ secrets.COUPANG_SECRET_KEY }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+        run: python generate_post.py "${{ github.event.inputs.title }}"
+
+      - name: 변경사항 커밋 및 push
+        run: |
+          git config user.name "auto-blog-bot"
+          git config user.email "auto-blog-bot@users.noreply.github.com"
+          git add docs keywords_queue.json
+          git diff --cached --quiet && echo "변경사항 없음, 커밋 생략" || git commit -m "자동 포스팅: $(date +'%Y-%m-%d %H:%M')"
+          git push
