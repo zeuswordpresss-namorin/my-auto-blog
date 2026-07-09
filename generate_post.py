@@ -118,48 +118,56 @@ CATEGORY_THEMES = {
         "gradient": [(255, 107, 157), (255, 154, 158), (250, 208, 196)],
         "accent": "#ff6b9d",
         "badge": "💄 뷰티·패션",
+        "label": "BEAUTY",
         "font": "Gowun+Dodum",
     },
     "푸드맛집": {
         "gradient": [(255, 107, 53), (247, 147, 30), (255, 210, 63)],
         "accent": "#ff6b35",
         "badge": "🍽️ 푸드·맛집",
+        "label": "FOOD",
         "font": "Jua",
     },
     "여행": {
         "gradient": [(17, 153, 142), (56, 239, 125), (100, 210, 255)],
         "accent": "#11998e",
         "badge": "✈️ 여행",
+        "label": "TRAVEL",
         "font": "Gowun+Dodum",
     },
     "테크IT": {
         "gradient": [(30, 60, 114), (42, 82, 152), (0, 198, 255)],
         "accent": "#2a5298",
         "badge": "💻 테크·IT",
+        "label": "TECH",
         "font": "Noto+Sans+KR:wght@700",
     },
     "재테크머니": {
         "gradient": [(17, 105, 79), (56, 173, 118), (168, 224, 99)],
         "accent": "#11694f",
         "badge": "💰 재테크",
+        "label": "MONEY",
         "font": "Noto+Sans+KR:wght@700",
     },
     "헬스운동": {
         "gradient": [(19, 78, 94), (113, 178, 128), (168, 224, 99)],
         "accent": "#134e5e",
         "badge": "💪 헬스·운동",
+        "label": "FITNESS",
         "font": "Jua",
     },
     "홈인테리어": {
         "gradient": [(196, 132, 88), (218, 170, 122), (238, 210, 175)],
         "accent": "#c48458",
         "badge": "🏠 홈·인테리어",
+        "label": "HOME",
         "font": "Gowun+Dodum",
     },
     "라이프스타일": {
         "gradient": [(66, 133, 244), (156, 39, 176), (234, 67, 121)],
         "accent": "#4a90d9",
         "badge": "✨ 라이프스타일",
+        "label": "LIFESTYLE",
         "font": "Noto+Sans+KR:wght@700",
     },
 }
@@ -294,6 +302,14 @@ POST_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
+ALL_THEME_FONTS = sorted({t["font"] for t in CATEGORY_THEMES.values()})
+
+
+def _google_fonts_url() -> str:
+    families = "&family=".join(ALL_THEME_FONTS)
+    return f"https://fonts.googleapis.com/css2?family={families}&family=Noto+Sans+KR:wght@400;700;900&display=swap"
+
+
 INDEX_TEMPLATE = """<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -303,27 +319,47 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="{site_url}/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">{ga_snippet}{adsense_snippet}
+<link href="{fonts_url}" rel="stylesheet">{ga_snippet}{adsense_snippet}
 <style>
   * {{ box-sizing: border-box; }}
-  body {{ max-width: 900px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#fafafa; color:#1a1a1a; }}
-  h1 {{ font-family: 'Jua', sans-serif; font-size: 2em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }}
+  body {{ max-width: 1000px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#f5f5f7; color:#1a1a1a; }}
+  h1.site-title {{ font-family: 'Jua', sans-serif; font-size: 2em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom: 6px; }}
   .dash-link {{ font-size: 0.4em; color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }}
-  .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }}
-  .card {{ text-decoration: none; color: #1a1a1a; background:#fff; border-radius: 14px; overflow:hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); transition: transform .15s ease, box-shadow .15s ease; }}
-  .card:hover {{ transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }}
-  .card img {{ width: 100%; aspect-ratio: 16/9; object-fit: cover; display:block; }}
-  .card-body {{ padding: 14px 16px 18px; }}
-  .badge {{ display:inline-block; font-size:0.72em; font-weight:700; color:#fff; padding:3px 10px; border-radius:999px; margin-bottom:8px; }}
-  .card-title {{ font-weight: 700; font-size: 1.02em; line-height:1.4; }}
-  .date {{ color: #999; font-size: 0.8em; margin-top: 6px; }}
+  .tier-label {{ font-size: 0.85em; font-weight:900; color:#aaa; letter-spacing:2px; margin: 34px 0 12px; text-transform:uppercase; }}
+  .tier-label:first-of-type {{ margin-top: 10px; }}
+
+  /* 상단(TOP) - 히어로 1건, 가장 큰 임팩트 */
+  .hero {{ display:block; text-decoration:none; color:#1a1a1a; background:#fff; border-radius:20px; overflow:hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.10); }}
+  .hero img {{ width:100%; aspect-ratio: 21/9; object-fit:cover; display:block; }}
+  .hero-body {{ padding: 22px 26px 28px; }}
+  .hero-badge {{ display:inline-block; font-size:0.8em; font-weight:700; color:#fff; padding:5px 14px; border-radius:999px; margin-bottom:12px; }}
+  .hero-title {{ font-size: 1.7em; font-weight:800; line-height:1.35; }}
+
+  /* 중단(MID) - 2단 그리드, 중간 크기 */
+  .mid-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:18px; }}
+  .mid-card {{ text-decoration:none; color:#1a1a1a; background:#fff; border-radius:16px; overflow:hidden; box-shadow: 0 3px 14px rgba(0,0,0,0.08); transition: transform .15s ease; }}
+  .mid-card:hover {{ transform: translateY(-3px); }}
+  .mid-card img {{ width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }}
+  .mid-body {{ padding: 14px 16px 18px; }}
+  .mid-title {{ font-weight:700; font-size:1.08em; line-height:1.4; }}
+
+  /* 하단(BOTTOM) - 촘촘한 아카이브 그리드, 작은 크기 */
+  .bottom-grid {{ display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:14px; }}
+  .bottom-card {{ text-decoration:none; color:#1a1a1a; background:#fff; border-radius:10px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
+  .bottom-card img {{ width:100%; aspect-ratio:16/10; object-fit:cover; display:block; }}
+  .bottom-body {{ padding: 8px 10px 12px; }}
+  .bottom-title {{ font-weight:600; font-size:0.85em; line-height:1.35; }}
+
+  .badge-sm {{ display:inline-block; font-size:0.65em; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:5px; }}
+  .date {{ color: #999; font-size: 0.78em; margin-top: 5px; }}
 </style>
 </head>
 <body>
-<h1>{site_title} <a class="dash-link" href="dashboard.html">📊 성과관리</a></h1>
-<div class="grid">
-{items}
-</div>
+<h1 class="site-title">{site_title} <a class="dash-link" href="dashboard.html">📊 성과관리</a></h1>
+
+{hero_html}
+{mid_html}
+{bottom_html}
 </body>
 </html>
 """
@@ -491,9 +527,35 @@ def _make_gradient_background(size, colors):
     return Image.composite(mid, blended, mid_mask)
 
 
-def generate_thumbnail(title: str, output_path: str, gradient_colors=None) -> None:
-    img = _make_gradient_background(THUMB_SIZE, gradient_colors or GEMINI_GRADIENT_COLORS)
-    draw = ImageDraw.Draw(img)
+def _hex_to_rgb(hex_color: str):
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def generate_thumbnail(title: str, output_path: str, theme: dict) -> None:
+    img = _make_gradient_background(THUMB_SIZE, theme["gradient"])
+    draw = ImageDraw.Draw(img, "RGBA")
+    accent_rgb = _hex_to_rgb(theme["accent"])
+
+    # --- 주제 명시 라벨 뱃지 (좌상단, 카테고리별 포인트컬러로 강한 임팩트) ---
+    label_font = _load_font(34)
+    label_text = theme["label"]
+    lb = draw.textbbox((0, 0), label_text, font=label_font)
+    pad_x, pad_y = 26, 14
+    badge_w = (lb[2] - lb[0]) + pad_x * 2
+    badge_h = (lb[3] - lb[1]) + pad_y * 2
+    badge_pos = (48, 48)
+    draw.rounded_rectangle(
+        [badge_pos, (badge_pos[0] + badge_w, badge_pos[1] + badge_h)],
+        radius=badge_h // 2, fill=accent_rgb + (255,),
+    )
+    draw.text((badge_pos[0] + pad_x, badge_pos[1] + pad_y - lb[1]), label_text, font=label_font, fill=(255, 255, 255, 255))
+
+    # --- 하단 포인트 바 (카테고리 색상으로 프레임을 잡아줘 시리즈 일관성 + 임팩트) ---
+    bar_h = 18
+    draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
+
+    # --- 제목 텍스트 ---
     font = _load_font(72)
     lines = textwrap.wrap(title, width=14)[:3]
 
@@ -502,16 +564,16 @@ def generate_thumbnail(title: str, output_path: str, gradient_colors=None) -> No
         bbox = draw.textbbox((0, 0), line, font=font)
         heights.append(bbox[3] - bbox[1])
     total_h = sum(heights) + (len(lines) - 1) * 20
-    y = (THUMB_SIZE[1] - total_h) / 2
+    y = (THUMB_SIZE[1] - total_h) / 2 + 20
 
     for line, lh in zip(lines, heights):
         bbox = draw.textbbox((0, 0), line, font=font)
         x = (THUMB_SIZE[0] - (bbox[2] - bbox[0])) / 2
-        draw.text((x + 4, y + 4), line, font=font, fill=(0, 0, 0))
-        draw.text((x, y), line, font=font, fill=(255, 255, 255))
+        draw.text((x + 4, y + 4), line, font=font, fill=(0, 0, 0, 160))
+        draw.text((x, y), line, font=font, fill=(255, 255, 255, 255))
         y += lh + 20
 
-    img.save(output_path, quality=90)
+    img.convert("RGB").save(output_path, quality=90)
 
 
 def _coupang_deeplink(search_url: str):
@@ -597,7 +659,7 @@ def save_post(article: dict):
     thumb_filename = f"{slug}-{today}.jpg"
     post_filename = f"{slug}-{today}.html"
 
-    generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme["gradient"])
+    generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme)
 
     post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
     thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
@@ -650,19 +712,50 @@ def update_index(new_post: dict) -> list:
     with open(POSTS_JSON, "w", encoding="utf-8") as f:
         json.dump(posts, f, ensure_ascii=False, indent=2)
 
-    items = "\n".join(
-        f'<a class="card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
-        f'<div class="card-body"><span class="badge" style="background:{p.get("accent", "#4a90d9")}">'
-        f'{p.get("badge", "✨ 라이프스타일")}</span>'
-        f'<div class="card-title">{p["title"]}</div>'
-        f'<div class="date">{p["date"]}</div></div></a>'
-        for p in posts
-    )
+    hero_posts, mid_posts, bottom_posts = posts[:1], posts[1:3], posts[3:]
+
+    hero_html = ""
+    if hero_posts:
+        p = hero_posts[0]
+        hero_html = (
+            '<div class="tier-label">🔥 최신 이야기</div>'
+            f'<a class="hero" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
+            f'<div class="hero-body"><span class="hero-badge" style="background:{p.get("accent", "#4a90d9")}">'
+            f'{p.get("badge", "✨ 라이프스타일")}</span>'
+            f'<div class="hero-title">{p["title"]}</div>'
+            f'<div class="date">{p["date"]}</div></div></a>'
+        )
+
+    mid_html = ""
+    if mid_posts:
+        cards = "\n".join(
+            f'<a class="mid-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
+            f'<div class="mid-body"><span class="badge-sm" style="background:{p.get("accent", "#4a90d9")}">'
+            f'{p.get("badge", "✨ 라이프스타일")}</span>'
+            f'<div class="mid-title">{p["title"]}</div>'
+            f'<div class="date">{p["date"]}</div></div></a>'
+            for p in mid_posts
+        )
+        mid_html = f'<div class="tier-label">📖 다음 이야기</div><div class="mid-grid">{cards}</div>'
+
+    bottom_html = ""
+    if bottom_posts:
+        cards = "\n".join(
+            f'<a class="bottom-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
+            f'<div class="bottom-body"><span class="badge-sm" style="background:{p.get("accent", "#4a90d9")}">'
+            f'{p.get("badge", "✨ 라이프스타일")}</span>'
+            f'<div class="bottom-title">{p["title"]}</div></div></a>'
+            for p in bottom_posts
+        )
+        bottom_html = f'<div class="tier-label">🗂️ 지난 글 모아보기</div><div class="bottom-grid">{cards}</div>'
+
     with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(INDEX_TEMPLATE.format(
-            site_title=SITE_TITLE, items=items,
+            site_title=SITE_TITLE,
             site_url=SITE_URL or ".", ga_snippet=_ga_snippet(),
             adsense_snippet=_adsense_snippet(),
+            fonts_url=_google_fonts_url(),
+            hero_html=hero_html, mid_html=mid_html, bottom_html=bottom_html,
         ))
 
     return posts
