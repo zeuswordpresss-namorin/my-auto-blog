@@ -355,7 +355,10 @@ def generate_article(title: str) -> dict:
             data = resp.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"]
             cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            article = json.loads(cleaned)
+            # Gemini가 JSON 뒤에 불필요한 텍스트를 덧붙이는 경우(Extra data 오류) 대비:
+            # 첫 번째로 완결되는 JSON 객체만 읽고 나머지는 무시한다.
+            decoder = json.JSONDecoder()
+            article, _ = decoder.raw_decode(cleaned)
             article["keyword"] = title
             return article
         except (KeyError, IndexError) as e:
@@ -571,3 +574,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
+
