@@ -30,11 +30,13 @@ v4에서 추가된 것 (저장소 통합):
        (별도의 "Blogger" 저장소/워크플로는 더 이상 필요 없음, 이 저장소 하나로 통합)
 """
 
+import base64
 import hashlib
 import hmac
 import io
 import json
 import os
+import random
 import re
 import sys
 import textwrap
@@ -53,6 +55,7 @@ SITE_TITLE = os.environ.get("SITE_TITLE", "내 자동 블로그")
 SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")  # 예: https://아이디.github.io/my-auto-blog
 GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "")  # 예: G-XXXXXXXXXX
 ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")  # 예: ca-pub-1234567890123456
+ADSENSE_SLOT_ID = os.environ.get("ADSENSE_SLOT_ID", "")  # 애드센스에서 만든 "디스플레이 광고" 단위 ID (수동 배치용)
 
 COUPANG_PARTNER_TAG = os.environ.get("COUPANG_PARTNER_TAG", "")
 COUPANG_ACCESS_KEY = os.environ.get("COUPANG_ACCESS_KEY", "")
@@ -81,23 +84,30 @@ GEMINI_URL = (
 
 SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조화 데이터(스키마 마크업) 전문가입니다.
 아래 규칙을 지켜 작성하세요:
-1. 제목은 검색 의도를 반영하되 과장/낚시성 표현은 피한다.
+1. 제목은 검색 의도를 반영하되 과장/낚시성 표현은 피한다. 가능하면 "무직자 비상금 대출 조건 서류"처럼
+   3~4개 단어가 조합된 구체적인 롱테일 키워드형 제목을 쓴다 (단, 입력받은 키워드의 의미를 벗어나지 않는다).
 2. 소제목(H2)을 4~6개 사용해 구조화한다.
-3. 확인되지 않은 구체적 수치·통계를 지어내지 않는다.
+3. 확인되지 않은 구체적 수치·통계·자격요건·금리·지원금액을 지어내지 않는다. 모르면 "기관별로 다를 수 있다" 식으로
+   일반화해서 쓰고, 절대 구체적 숫자를 추측해서 채우지 않는다.
 4. 글자 수는 1500~2200자 내외.
-5. 자연스러운 위치에 제품 추천 문맥을 1곳 만든다 (실제 링크는 넣지 않음).
-6. 콘텐츠 내용을 보고 아래 3가지 중 구글 상위노출에 가장 유리한 스키마 타입을 스스로 판단해서 고른다:
+5. 두괄식으로 쓴다: 첫 문단(도입부)에서 이 글이 다루는 핵심 답/결론을 먼저 요약 제시하고, 이후 문단에서 자세히 설명한다.
+6. 가독성을 위해 본문 중 최소 1곳에 <table> (비교/정리표) 또는 <ul>/<ol> 목록을 반드시 포함한다.
+7. 자연스러운 위치에 제품/서비스 추천 문맥을 1곳 만든다 (실제 링크는 넣지 않음, 나중에 자동 삽입됨).
+8. 콘텐츠 내용을 보고 아래 3가지 중 구글 상위노출에 가장 유리한 스키마 타입을 스스로 판단해서 고른다:
    - "FAQPage": 자주 묻는 질문/답변 형태로 정리하기 좋은 주제일 때 (예: "~란?", "~ 방법", "~ 차이" 등 질의응답형 검색의도)
    - "HowTo": 순서가 있는 절차/방법을 안내하는 주제일 때 (예: "~하는 법", "~ 설치 방법")
    - "Article": 위 둘에 해당하지 않는 일반 정보/추천/리뷰형 글일 때
-7. 고른 스키마 타입에 맞는 데이터를 함께 채운다:
+9. 고른 스키마 타입에 맞는 데이터를 함께 채운다:
    - FAQPage를 골랐다면 "faq_items"에 실제 본문 내용과 일치하는 질문/답변 3~5개를 넣는다 (본문에도 자연스럽게 Q&A 형태로 녹여쓴다)
    - HowTo를 골랐다면 "howto_steps"에 실제 본문 순서와 일치하는 단계 3~6개를 넣는다 (각 step은 name(단계 제목)과 text(설명))
    - Article이면 faq_items, howto_steps는 빈 배열로 둔다
-8. 제목/키워드를 보고 아래 카테고리 중 가장 알맞은 것 하나를 "category"에 고른다 (디자인 테마 자동 매칭용):
-   ["뷰티패션", "푸드맛집", "여행", "테크IT", "재테크머니", "헬스운동", "홈인테리어", "라이프스타일"]
-   애매하면 "라이프스타일"을 선택한다.
-9. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
+10. 제목/키워드를 보고 아래 카테고리 중 가장 알맞은 것 하나를 "category"에 고른다 (디자인 테마 자동 매칭용):
+    ["뷰티패션", "푸드맛집", "여행", "테크IT", "재테크머니", "헬스운동", "홈인테리어", "대출보험", "정부지원금", "라이프스타일"]
+    애매하면 "라이프스타일"을 선택한다.
+11. category가 "대출보험" 또는 "정부지원금"이면 (실제 금융/정책 정보라 신중해야 하므로):
+    - 특정 금융사·상품명을 단정적으로 추천하지 않는다 (일반적인 조건/절차 위주로 설명)
+    - 신청 절차나 자격요건은 "일반적으로"라는 표현을 쓰고, 최신 여부는 공식 기관 확인이 필요하다는 점을 본문에 자연스럽게 언급한다
+12. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
 {
   "title": "...",
   "html_body": "...",
@@ -105,9 +115,9 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
   "schema_type": "Article 또는 FAQPage 또는 HowTo",
   "faq_items": [{"question": "...", "answer": "..."}],
   "howto_steps": [{"name": "...", "text": "..."}],
-  "category": "위 8개 중 하나"
+  "category": "위 10개 중 하나"
 }
-html_body는 <h2>, <p>, <ul> 등을 사용한 HTML 조각이어야 한다."""
+html_body는 <h2>, <p>, <table>, <ul> 등을 사용한 HTML 조각이어야 한다."""
 
 
 # =====================================================================
@@ -120,6 +130,7 @@ CATEGORY_THEMES = {
         "badge": "💄 뷰티·패션",
         "label": "BEAUTY",
         "font": "Gowun+Dodum",
+        "decor": ["💄", "💅", "👗", "👠", "💋", "🎀", "💎", "🌸"],
     },
     "푸드맛집": {
         "gradient": [(255, 107, 53), (247, 147, 30), (255, 210, 63)],
@@ -127,6 +138,7 @@ CATEGORY_THEMES = {
         "badge": "🍽️ 푸드·맛집",
         "label": "FOOD",
         "font": "Jua",
+        "decor": ["🍕", "🍔", "🍰", "🍜", "🍩", "☕", "🍓", "🧁"],
     },
     "여행": {
         "gradient": [(17, 153, 142), (56, 239, 125), (100, 210, 255)],
@@ -134,6 +146,7 @@ CATEGORY_THEMES = {
         "badge": "✈️ 여행",
         "label": "TRAVEL",
         "font": "Gowun+Dodum",
+        "decor": ["✈️", "🌴", "🗺️", "🧳", "🏖️", "📸", "🚗", "🗼"],
     },
     "테크IT": {
         "gradient": [(30, 60, 114), (42, 82, 152), (0, 198, 255)],
@@ -141,6 +154,7 @@ CATEGORY_THEMES = {
         "badge": "💻 테크·IT",
         "label": "TECH",
         "font": "Noto+Sans+KR:wght@700",
+        "decor": ["💻", "⌨️", "🖥️", "📱", "🔌", "🤖", "⚡", "🛰️"],
     },
     "재테크머니": {
         "gradient": [(17, 105, 79), (56, 173, 118), (168, 224, 99)],
@@ -148,6 +162,7 @@ CATEGORY_THEMES = {
         "badge": "💰 재테크",
         "label": "MONEY",
         "font": "Noto+Sans+KR:wght@700",
+        "decor": ["💰", "💵", "📈", "🪙", "🏦", "💳", "📊", "🐷"],
     },
     "헬스운동": {
         "gradient": [(19, 78, 94), (113, 178, 128), (168, 224, 99)],
@@ -155,6 +170,7 @@ CATEGORY_THEMES = {
         "badge": "💪 헬스·운동",
         "label": "FITNESS",
         "font": "Jua",
+        "decor": ["💪", "🏋️", "🥗", "🧘", "🏃", "⏱️", "🚴", "🥑"],
     },
     "홈인테리어": {
         "gradient": [(196, 132, 88), (218, 170, 122), (238, 210, 175)],
@@ -162,6 +178,7 @@ CATEGORY_THEMES = {
         "badge": "🏠 홈·인테리어",
         "label": "HOME",
         "font": "Gowun+Dodum",
+        "decor": ["🏠", "🪴", "🕯️", "🛋️", "🖼️", "🧺", "🪞", "🛏️"],
     },
     "라이프스타일": {
         "gradient": [(66, 133, 244), (156, 39, 176), (234, 67, 121)],
@@ -169,6 +186,25 @@ CATEGORY_THEMES = {
         "badge": "✨ 라이프스타일",
         "label": "LIFESTYLE",
         "font": "Noto+Sans+KR:wght@700",
+        "decor": ["✨", "🌸", "☕", "📓", "🎧", "🕊️", "🌿", "⭐"],
+    },
+    "대출보험": {
+        "gradient": [(20, 30, 48), (36, 59, 85), (65, 90, 119)],
+        "accent": "#1e3a5f",
+        "badge": "🏦 대출·보험",
+        "label": "FINANCE",
+        "font": "Noto+Sans+KR:wght@700",
+        "decor": ["🏦", "📄", "💳", "🔍", "📞", "✅", "💼", "🧾"],
+        "ymyl": True,
+    },
+    "정부지원금": {
+        "gradient": [(0, 91, 82), (0, 128, 105), (82, 183, 136)],
+        "accent": "#00695c",
+        "badge": "🏛️ 정부지원금",
+        "label": "SUPPORT",
+        "font": "Noto+Sans+KR:wght@700",
+        "decor": ["🏛️", "📋", "🖊️", "📅", "✅", "💌", "🪪", "📢"],
+        "ymyl": True,
     },
 }
 DEFAULT_THEME = CATEGORY_THEMES["라이프스타일"]
@@ -176,6 +212,27 @@ DEFAULT_THEME = CATEGORY_THEMES["라이프스타일"]
 
 def get_theme(category: str) -> dict:
     return CATEGORY_THEMES.get(category, DEFAULT_THEME)
+
+
+def build_decor_html(theme: dict, seed: str) -> str:
+    """글 주제에 맞는 아기자기한 이모지 일러스트를 배경 빈 공간에 랜덤 배치합니다.
+    seed(글 slug)로 고정해서 같은 글은 새로고침해도 항상 같은 배치가 나옵니다."""
+    rng = random.Random(seed)
+    emojis = theme["decor"]
+    count = rng.randint(9, 12)
+    items = []
+    for _ in range(count):
+        emoji = rng.choice(emojis)
+        top = rng.randint(0, 96)
+        left = rng.randint(0, 92)
+        size = rng.randint(26, 58)
+        rotate = rng.randint(-30, 30)
+        opacity = round(rng.uniform(0.07, 0.16), 2)
+        items.append(
+            f'<span class="decor-item" style="top:{top}%;left:{left}%;font-size:{size}px;'
+            f'opacity:{opacity};transform:rotate({rotate}deg);">{emoji}</span>'
+        )
+    return '<div class="decor-layer" aria-hidden="true">' + "".join(items) + "</div>"
 
 
 def _ga_snippet() -> str:
@@ -245,7 +302,39 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str) 
             "author": {"@type": "Organization", "name": SITE_TITLE},
         }
 
-    print(f"  → [스키마 마크업] AI가 선택한 타입: {schema_type}")
+    data.pop("@context", None)
+    breadcrumb = {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": SITE_TITLE, "item": (SITE_URL + "/") if SITE_URL else "../index.html"},
+            {"@type": "ListItem", "position": 2, "name": article.get("category", "라이프스타일"), "item": (SITE_URL + "/") if SITE_URL else "../index.html"},
+            {"@type": "ListItem", "position": 3, "name": title, "item": canonical_url},
+        ],
+    }
+    graph_data = {"@context": "https://schema.org", "@graph": [data, breadcrumb]}
+
+    print(f"  → [스키마 마크업] AI가 선택한 타입: {schema_type} (+ BreadcrumbList)")
+    return json.dumps(graph_data, ensure_ascii=False, indent=2)
+
+
+def build_blog_index_json_ld(posts: list) -> str:
+    """홈 화면용 Blog 스키마 마크업 - 최근 글 목록을 구조화 데이터로 노출합니다."""
+    data = {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        "name": SITE_TITLE,
+        "url": (SITE_URL + "/") if SITE_URL else ".",
+        "blogPost": [
+            {
+                "@type": "BlogPosting",
+                "headline": p["title"],
+                "url": (f"{SITE_URL}/{p['file']}" if SITE_URL else p["file"]),
+                "datePublished": p["date"],
+                "image": (f"{SITE_URL}/{p['thumb']}" if SITE_URL else p["thumb"]),
+            }
+            for p in posts[:10]
+        ],
+    }
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 
@@ -273,14 +362,17 @@ POST_TEMPLATE = """<!DOCTYPE html>
 </script>{ga_snippet}{adsense_snippet}
 <style>
   * {{ box-sizing: border-box; }}
-  body {{ max-width: 720px; margin: 0 auto; padding: 0 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.75; color: #1a1a1a; background: #fafafa; }}
+  body {{ position: relative; max-width: 720px; margin: 0 auto; padding: 0 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.75; color: #1a1a1a; background: #fafafa; overflow-x: hidden; }}
+  .decor-layer {{ position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }}
+  .decor-item {{ position: absolute; filter: grayscale(0%); user-select: none; }}
+  .content {{ position: relative; z-index: 1; }}
   .hero {{ margin: 0 -20px 24px; position: relative; }}
   .hero img {{ width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }}
   .badge {{ display: inline-block; background: {accent}; color: #fff; font-size: 0.8em; font-weight: 700; padding: 5px 14px; border-radius: 999px; margin: 20px 0 10px; }}
   h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: 1.9em; line-height: 1.35; margin: 0 0 8px; }}
-  h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: 1.35em; margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; }}
-  p {{ margin: 1em 0; }}
-  a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; }}
+  h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: 1.35em; margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; position: relative; z-index: 1; }}
+  p {{ margin: 1em 0; position: relative; z-index: 1; }}
+  a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }}
   .meta {{ color: #999; font-size: 0.85em; margin-bottom: 4px; }}
   .related {{ margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }}
   .related h3 {{ font-size: 1.1em; margin-bottom: 14px; }}
@@ -291,6 +383,8 @@ POST_TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
+{decor_html}
+<div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
 <div class="hero"><img src="../thumbs/{thumb_filename}" alt="{title}"></div>
 <span class="badge">{badge}</span>
@@ -298,6 +392,8 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <p class="meta">{date}</p>
 {html_body}
 {related_html}
+{bottom_ad}
+</div>
 </body>
 </html>
 """
@@ -319,7 +415,10 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="{site_url}/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="{fonts_url}" rel="stylesheet">{ga_snippet}{adsense_snippet}
+<link href="{fonts_url}" rel="stylesheet">
+<script type="application/ld+json">
+{blog_json_ld}
+</script>{ga_snippet}{adsense_snippet}
 <style>
   * {{ box-sizing: border-box; }}
   body {{ max-width: 1000px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#f5f5f7; color:#1a1a1a; }}
@@ -533,8 +632,8 @@ def _hex_to_rgb(hex_color: str):
 
 
 def generate_thumbnail(title: str, output_path: str, theme: dict) -> None:
-    img = _make_gradient_background(THUMB_SIZE, theme["gradient"])
-    draw = ImageDraw.Draw(img, "RGBA")
+    img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
+    draw = ImageDraw.Draw(img)
     accent_rgb = _hex_to_rgb(theme["accent"])
 
     # --- 주제 명시 라벨 뱃지 (좌상단, 카테고리별 포인트컬러로 강한 임팩트) ---
@@ -573,7 +672,7 @@ def generate_thumbnail(title: str, output_path: str, theme: dict) -> None:
         draw.text((x, y), line, font=font, fill=(255, 255, 255, 255))
         y += lh + 20
 
-    img.convert("RGB").save(output_path, quality=90)
+    img.convert("RGB").save(output_path, format="WEBP", quality=82, method=6)
 
 
 def _coupang_deeplink(search_url: str):
@@ -603,6 +702,77 @@ def _coupang_deeplink(search_url: str):
     except Exception as e:
         print(f"  → [쿠팡 딥링크] 발급 실패, 일반 링크로 대체: {e}")
         return None
+
+
+def add_ymyl_disclaimer(article: dict) -> dict:
+    """대출/보험/정부지원금처럼 잘못된 정보가 실제 금전적 피해로 이어질 수 있는 주제는
+    AI 프롬프트 준수 여부와 무관하게 코드 레벨에서 항상 안내문구를 강제로 붙입니다."""
+    theme = get_theme(article.get("category", "라이프스타일"))
+    if not theme.get("ymyl"):
+        return article
+
+    disclaimer = (
+        '<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;'
+        'padding:14px 18px;margin:24px 0;font-size:0.92em;color:#5d4037;">'
+        '⚠️ <b>안내:</b> 이 글은 일반적인 정보 제공 목적으로 작성되었으며, 특정 상품·기관을 보증하지 않습니다. '
+        '금리, 자격 요건, 지원금액, 신청 기간 등은 수시로 바뀔 수 있으니 '
+        '반드시 해당 금융기관 또는 정부24·관할 지자체 등 공식 채널에서 최신 정보를 확인하세요.'
+        '</div>'
+    )
+    article["html_body"] += disclaimer
+    return article
+
+
+def add_internal_link(article: dict) -> dict:
+    """같은 카테고리의 이전 글이 있으면 본문 도입부 바로 아래에 자연스럽게 내부링크를 삽입합니다
+    (내부 순환 유도 → 체류시간/페이지뷰 증가)."""
+    category = article.get("category", "라이프스타일")
+    if not os.path.exists(POSTS_JSON):
+        return article
+    with open(POSTS_JSON, "r", encoding="utf-8") as f:
+        posts = json.load(f)
+    candidates = [p for p in posts if p.get("category") == category]
+    if not candidates:
+        return article
+
+    pick = candidates[0]
+    link_html = f'<p>📌 관련해서 <a href="../{pick["file"]}">{pick["title"]}</a>도 함께 참고해보세요.</p>'
+
+    idx = article["html_body"].find("</p>")
+    if idx != -1:
+        insert_at = idx + len("</p>")
+        article["html_body"] = article["html_body"][:insert_at] + link_html + article["html_body"][insert_at:]
+    else:
+        article["html_body"] = link_html + article["html_body"]
+    return article
+
+
+def _manual_ad_unit() -> str:
+    if not (ADSENSE_CLIENT_ID and ADSENSE_SLOT_ID):
+        return ""
+    return (
+        '<div style="margin:28px 0;text-align:center;">'
+        f'<ins class="adsbygoogle" style="display:block" data-ad-client="{ADSENSE_CLIENT_ID}" '
+        f'data-ad-slot="{ADSENSE_SLOT_ID}" data-ad-format="auto" data-full-width-responsive="true"></ins>'
+        '<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'
+        '</div>'
+    )
+
+
+def insert_manual_ads(article: dict) -> dict:
+    """시선이 가장 많이 머무는 '본문 상단 소제목 위'에 광고를 1개 수동 배치합니다.
+    글 하단 광고는 POST_TEMPLATE에서 related 섹션 뒤에 별도로 추가됩니다.
+    ADSENSE_SLOT_ID 미설정 시 아무 것도 삽입되지 않습니다 (자동광고만 동작)."""
+    ad_html = _manual_ad_unit()
+    if not ad_html:
+        return article
+
+    idx = article["html_body"].find("<h2")
+    if idx != -1:
+        article["html_body"] = article["html_body"][:idx] + ad_html + article["html_body"][idx:]
+    else:
+        article["html_body"] += ad_html
+    return article
 
 
 def add_coupang_markup(article: dict) -> dict:
@@ -656,7 +826,7 @@ def save_post(article: dict):
 
     slug = slugify(article["keyword"])
     today = datetime.now().strftime("%Y-%m-%d")
-    thumb_filename = f"{slug}-{today}.jpg"
+    thumb_filename = f"{slug}-{today}.webp"
     post_filename = f"{slug}-{today}.html"
 
     generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme)
@@ -668,6 +838,7 @@ def save_post(article: dict):
     meta_description = article.get("meta_description", "")
     json_ld = build_json_ld(article, post_url, thumb_url, today)
     related_html = _build_related_html(exclude_slug=f"posts/{post_filename}")
+    decor_html = build_decor_html(theme, seed=slug)
 
     html = POST_TEMPLATE.format(
         title=title,
@@ -685,6 +856,8 @@ def save_post(article: dict):
         accent=theme["accent"],
         badge=theme["badge"],
         related_html=related_html,
+        decor_html=decor_html,
+        bottom_ad=_manual_ad_unit(),
     )
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
@@ -698,7 +871,8 @@ def save_post(article: dict):
         "accent": theme["accent"],
         "badge": theme["badge"],
     }
-    return post_meta, json_ld, thumb_url
+    local_thumb_path = os.path.join(DOCS_DIR, "thumbs", thumb_filename)
+    return post_meta, json_ld, thumb_url, local_thumb_path
 
 
 def update_index(new_post: dict) -> list:
@@ -756,6 +930,7 @@ def update_index(new_post: dict) -> list:
             adsense_snippet=_adsense_snippet(),
             fonts_url=_google_fonts_url(),
             hero_html=hero_html, mid_html=mid_html, bottom_html=bottom_html,
+            blog_json_ld=build_blog_index_json_ld(posts),
         ))
 
     return posts
@@ -808,21 +983,29 @@ def _get_blogger_access_token() -> str:
     return resp.json()["access_token"]
 
 
-def publish_to_blogger(article: dict, json_ld: str, thumb_url: str) -> None:
+def publish_to_blogger(article: dict, json_ld: str, thumb_url: str, local_thumb_path: str) -> None:
     """같은 글을 구글 블로거에도 발행합니다. 미설정/실패해도 전체 파이프라인은 계속 진행됩니다."""
     if not _blogger_configured():
         print("  → [블로거] 관련 Secrets가 없어 건너뜁니다 (GitHub Pages만 발행).")
         return
-    if not SITE_URL:
-        print("  → [블로거] 주의: SITE_URL이 없어 썸네일 이미지가 블로거에서 깨질 수 있습니다 (Variables에 SITE_URL 등록 권장).")
 
     try:
         access_token = _get_blogger_access_token()
         theme = get_theme(article.get("category", "라이프스타일"))
 
-        # 스키마 마크업(JSON-LD)을 본문 안에 함께 삽입 (대부분의 블로거 테마에서 script 태그 유지됨)
+        # 썸네일을 외부 URL 링크가 아니라 base64로 직접 본문에 박아 넣습니다.
+        # → SITE_URL 설정 여부나 GitHub Pages 배포 상태와 무관하게 이미지가 항상 정상 표시됩니다
+        #   (이전에 "이미지 손상"이 발생했던 원인이 바로 외부 링크 의존성이었습니다).
+        try:
+            with open(local_thumb_path, "rb") as f:
+                img_b64 = base64.b64encode(f.read()).decode("ascii")
+            img_src = f"data:image/webp;base64,{img_b64}"
+        except Exception as e:
+            print(f"  → [블로거] 썸네일 base64 인코딩 실패, 외부 링크로 대체: {e}")
+            img_src = thumb_url
+
         content_html = (
-            f'<img src="{thumb_url}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
+            f'<img src="{img_src}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
             f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
             f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
             f'{article["html_body"]}'
@@ -848,12 +1031,15 @@ def run():
     article = generate_article(title)
     print(f"  → 글 생성 완료: {article['title']}")
 
+    article = add_internal_link(article)
+    article = insert_manual_ads(article)
     article = add_coupang_markup(article)
-    post_meta, json_ld, thumb_url = save_post(article)
+    article = add_ymyl_disclaimer(article)
+    post_meta, json_ld, thumb_url, local_thumb_path = save_post(article)
     posts = update_index(post_meta)
     update_dashboard(posts)
     update_seo_files(posts)
-    publish_to_blogger(article, json_ld, thumb_url)
+    publish_to_blogger(article, json_ld, thumb_url, local_thumb_path)
 
     print(f"  → 저장 완료: docs/{post_meta['file']}, docs/{post_meta['thumb']}")
     print(f"  → 대시보드/사이트맵 갱신 완료")
@@ -865,4 +1051,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
-
