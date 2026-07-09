@@ -6,24 +6,30 @@
 <title></title>
 <meta name="description" content=" - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="https://zeuswordpresss-namorin.github.io/my-auto-blog/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  body { max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, sans-serif; }
-  h1 { font-size: 1.8em; }
-  ul { list-style: none; padding: 0; }
-  li { margin: 18px 0; }
-  a { color: #222; text-decoration: none; }
-  a:hover { color: #4a90d9; }
-  img { width: 100%; border-radius: 8px; display:block; margin-bottom: 8px; }
-  .date { color: #999; font-size: 0.85em; }
-  .dash-link { float:right; font-size:0.8em; color:#4a90d9; }
+  * { box-sizing: border-box; }
+  body { max-width: 900px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#fafafa; color:#1a1a1a; }
+  h1 { font-family: 'Jua', sans-serif; font-size: 2em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .dash-link { font-size: 0.4em; color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }
+  .card { text-decoration: none; color: #1a1a1a; background:#fff; border-radius: 14px; overflow:hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); transition: transform .15s ease, box-shadow .15s ease; }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+  .card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display:block; }
+  .card-body { padding: 14px 16px 18px; }
+  .badge { display:inline-block; font-size:0.72em; font-weight:700; color:#fff; padding:3px 10px; border-radius:999px; margin-bottom:8px; }
+  .card-title { font-weight: 700; font-size: 1.02em; line-height:1.4; }
+  .date { color: #999; font-size: 0.8em; margin-top: 6px; }
 </style>
 </head>
 <body>
-<h1> <a class="dash-link" href="dashboard.html">성과관리 →</a></h1>
-<ul>
-<li><a href="posts/다이어트-식단-2026-07-09.html"><img src="thumbs/다이어트-식단-2026-07-09.jpg" alt="나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심">나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심</a><div class="date">2026-07-09</div></li>
-<li><a href="posts/여름-휴가지-추천-2026-07-09.html"><img src="thumbs/여름-휴가지-추천-2026-07-09.jpg" alt="잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천">잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천</a><div class="date">2026-07-09</div></li>
-<li><a href="posts/장마-2026-07-08.html"><img src="thumbs/장마-2026-07-08.jpg" alt="장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책">장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책</a><div class="date">2026-07-08</div></li>
-</ul>
+<h1> <a class="dash-link" href="dashboard.html">📊 성과관리</a></h1>
+<div class="grid">
+<a class="card" href="posts/재테크-방법-2026-07-09.html"><img src="thumbs/재테크-방법-2026-07-09.jpg" alt="초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!"><div class="card-body"><span class="badge" style="background:#11694f">💰 재테크</span><div class="card-title">초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!</div><div class="date">2026-07-09</div></div></a>
+<a class="card" href="posts/다이어트-식단-2026-07-09.html"><img src="thumbs/다이어트-식단-2026-07-09.jpg" alt="나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심"><div class="card-body"><span class="badge" style="background:#4a90d9">✨ 라이프스타일</span><div class="card-title">나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심</div><div class="date">2026-07-09</div></div></a>
+<a class="card" href="posts/여름-휴가지-추천-2026-07-09.html"><img src="thumbs/여름-휴가지-추천-2026-07-09.jpg" alt="잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천"><div class="card-body"><span class="badge" style="background:#4a90d9">✨ 라이프스타일</span><div class="card-title">잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천</div><div class="date">2026-07-09</div></div></a>
+<a class="card" href="posts/장마-2026-07-08.html"><img src="thumbs/장마-2026-07-08.jpg" alt="장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책"><div class="card-body"><span class="badge" style="background:#4a90d9">✨ 라이프스타일</span><div class="card-title">장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책</div><div class="date">2026-07-08</div></div></a>
+</div>
 </body>
 </html>
