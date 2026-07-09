@@ -94,16 +94,80 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
    - FAQPage를 골랐다면 "faq_items"에 실제 본문 내용과 일치하는 질문/답변 3~5개를 넣는다 (본문에도 자연스럽게 Q&A 형태로 녹여쓴다)
    - HowTo를 골랐다면 "howto_steps"에 실제 본문 순서와 일치하는 단계 3~6개를 넣는다 (각 step은 name(단계 제목)과 text(설명))
    - Article이면 faq_items, howto_steps는 빈 배열로 둔다
-8. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
+8. 제목/키워드를 보고 아래 카테고리 중 가장 알맞은 것 하나를 "category"에 고른다 (디자인 테마 자동 매칭용):
+   ["뷰티패션", "푸드맛집", "여행", "테크IT", "재테크머니", "헬스운동", "홈인테리어", "라이프스타일"]
+   애매하면 "라이프스타일"을 선택한다.
+9. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
 {
   "title": "...",
   "html_body": "...",
   "meta_description": "...",
   "schema_type": "Article 또는 FAQPage 또는 HowTo",
   "faq_items": [{"question": "...", "answer": "..."}],
-  "howto_steps": [{"name": "...", "text": "..."}]
+  "howto_steps": [{"name": "...", "text": "..."}],
+  "category": "위 8개 중 하나"
 }
 html_body는 <h2>, <p>, <ul> 등을 사용한 HTML 조각이어야 한다."""
+
+
+# =====================================================================
+# 카테고리별 트렌디 테마 - 글 주제(category)에 맞춰 자동으로 색상/폰트/뱃지가 바뀝니다
+# =====================================================================
+CATEGORY_THEMES = {
+    "뷰티패션": {
+        "gradient": [(255, 107, 157), (255, 154, 158), (250, 208, 196)],
+        "accent": "#ff6b9d",
+        "badge": "💄 뷰티·패션",
+        "font": "Gowun+Dodum",
+    },
+    "푸드맛집": {
+        "gradient": [(255, 107, 53), (247, 147, 30), (255, 210, 63)],
+        "accent": "#ff6b35",
+        "badge": "🍽️ 푸드·맛집",
+        "font": "Jua",
+    },
+    "여행": {
+        "gradient": [(17, 153, 142), (56, 239, 125), (100, 210, 255)],
+        "accent": "#11998e",
+        "badge": "✈️ 여행",
+        "font": "Gowun+Dodum",
+    },
+    "테크IT": {
+        "gradient": [(30, 60, 114), (42, 82, 152), (0, 198, 255)],
+        "accent": "#2a5298",
+        "badge": "💻 테크·IT",
+        "font": "Noto+Sans+KR:wght@700",
+    },
+    "재테크머니": {
+        "gradient": [(17, 105, 79), (56, 173, 118), (168, 224, 99)],
+        "accent": "#11694f",
+        "badge": "💰 재테크",
+        "font": "Noto+Sans+KR:wght@700",
+    },
+    "헬스운동": {
+        "gradient": [(19, 78, 94), (113, 178, 128), (168, 224, 99)],
+        "accent": "#134e5e",
+        "badge": "💪 헬스·운동",
+        "font": "Jua",
+    },
+    "홈인테리어": {
+        "gradient": [(196, 132, 88), (218, 170, 122), (238, 210, 175)],
+        "accent": "#c48458",
+        "badge": "🏠 홈·인테리어",
+        "font": "Gowun+Dodum",
+    },
+    "라이프스타일": {
+        "gradient": [(66, 133, 244), (156, 39, 176), (234, 67, 121)],
+        "accent": "#4a90d9",
+        "badge": "✨ 라이프스타일",
+        "font": "Noto+Sans+KR:wght@700",
+    },
+}
+DEFAULT_THEME = CATEGORY_THEMES["라이프스타일"]
+
+
+def get_theme(category: str) -> dict:
+    return CATEGORY_THEMES.get(category, DEFAULT_THEME)
 
 
 def _ga_snippet() -> str:
@@ -194,23 +258,38 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{meta_description}">
 <meta name="twitter:image" content="{thumb_url}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family={font}&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">
 {json_ld}
 </script>{ga_snippet}{adsense_snippet}
 <style>
-  body {{ max-width: 720px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, sans-serif; line-height: 1.7; color: #222; }}
-  h1 {{ font-size: 1.8em; }}
-  h2 {{ font-size: 1.3em; margin-top: 1.5em; border-left: 4px solid #4a90d9; padding-left: 10px; }}
-  img.thumb {{ width: 100%; border-radius: 8px; margin-bottom: 20px; }}
-  a.back {{ display: inline-block; margin-bottom: 20px; color: #4a90d9; text-decoration: none; }}
+  * {{ box-sizing: border-box; }}
+  body {{ max-width: 720px; margin: 0 auto; padding: 0 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.75; color: #1a1a1a; background: #fafafa; }}
+  .hero {{ margin: 0 -20px 24px; position: relative; }}
+  .hero img {{ width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }}
+  .badge {{ display: inline-block; background: {accent}; color: #fff; font-size: 0.8em; font-weight: 700; padding: 5px 14px; border-radius: 999px; margin: 20px 0 10px; }}
+  h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: 1.9em; line-height: 1.35; margin: 0 0 8px; }}
+  h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: 1.35em; margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; }}
+  p {{ margin: 1em 0; }}
+  a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; }}
+  .meta {{ color: #999; font-size: 0.85em; margin-bottom: 4px; }}
+  .related {{ margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }}
+  .related h3 {{ font-size: 1.1em; margin-bottom: 14px; }}
+  .related-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }}
+  .related-card {{ text-decoration: none; color: #1a1a1a; }}
+  .related-card img {{ width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; margin-bottom: 6px; }}
+  .related-card span {{ font-size: 0.88em; font-weight: 500; }}
 </style>
 </head>
 <body>
 <a class="back" href="../index.html">← 목록으로</a>
-<img class="thumb" src="../thumbs/{thumb_filename}" alt="{title}">
+<div class="hero"><img src="../thumbs/{thumb_filename}" alt="{title}"></div>
+<span class="badge">{badge}</span>
 <h1>{title}</h1>
-<p style="color:#888;font-size:0.9em;">{date}</p>
+<p class="meta">{date}</p>
 {html_body}
+{related_html}
 </body>
 </html>
 """
@@ -222,24 +301,29 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{site_title}</title>
 <meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
-<link rel="canonical" href="{site_url}/">{ga_snippet}{adsense_snippet}
+<link rel="canonical" href="{site_url}/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">{ga_snippet}{adsense_snippet}
 <style>
-  body {{ max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, sans-serif; }}
-  h1 {{ font-size: 1.8em; }}
-  ul {{ list-style: none; padding: 0; }}
-  li {{ margin: 18px 0; }}
-  a {{ color: #222; text-decoration: none; }}
-  a:hover {{ color: #4a90d9; }}
-  img {{ width: 100%; border-radius: 8px; display:block; margin-bottom: 8px; }}
-  .date {{ color: #999; font-size: 0.85em; }}
-  .dash-link {{ float:right; font-size:0.8em; color:#4a90d9; }}
+  * {{ box-sizing: border-box; }}
+  body {{ max-width: 900px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#fafafa; color:#1a1a1a; }}
+  h1 {{ font-family: 'Jua', sans-serif; font-size: 2em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }}
+  .dash-link {{ font-size: 0.4em; color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }}
+  .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }}
+  .card {{ text-decoration: none; color: #1a1a1a; background:#fff; border-radius: 14px; overflow:hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); transition: transform .15s ease, box-shadow .15s ease; }}
+  .card:hover {{ transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }}
+  .card img {{ width: 100%; aspect-ratio: 16/9; object-fit: cover; display:block; }}
+  .card-body {{ padding: 14px 16px 18px; }}
+  .badge {{ display:inline-block; font-size:0.72em; font-weight:700; color:#fff; padding:3px 10px; border-radius:999px; margin-bottom:8px; }}
+  .card-title {{ font-weight: 700; font-size: 1.02em; line-height:1.4; }}
+  .date {{ color: #999; font-size: 0.8em; margin-top: 6px; }}
 </style>
 </head>
 <body>
-<h1>{site_title} <a class="dash-link" href="dashboard.html">성과관리 →</a></h1>
-<ul>
+<h1>{site_title} <a class="dash-link" href="dashboard.html">📊 성과관리</a></h1>
+<div class="grid">
 {items}
-</ul>
+</div>
 </body>
 </html>
 """
@@ -407,8 +491,8 @@ def _make_gradient_background(size, colors):
     return Image.composite(mid, blended, mid_mask)
 
 
-def generate_thumbnail(title: str, output_path: str) -> None:
-    img = _make_gradient_background(THUMB_SIZE, GEMINI_GRADIENT_COLORS)
+def generate_thumbnail(title: str, output_path: str, gradient_colors=None) -> None:
+    img = _make_gradient_background(THUMB_SIZE, gradient_colors or GEMINI_GRADIENT_COLORS)
     draw = ImageDraw.Draw(img)
     font = _load_font(72)
     lines = textwrap.wrap(title, width=14)[:3]
@@ -479,16 +563,41 @@ def add_coupang_markup(article: dict) -> dict:
     return article
 
 
+def _font_family_name(font_param: str) -> str:
+    return font_param.split(":")[0].replace("+", " ")
+
+
+def _build_related_html(exclude_slug: str) -> str:
+    """이전에 발행된 글 중 최신 3개를 관련글로 보여줍니다 (체류시간/페이지뷰 증가 → 광고수익에 도움)."""
+    if not os.path.exists(POSTS_JSON):
+        return ""
+    with open(POSTS_JSON, "r", encoding="utf-8") as f:
+        posts = json.load(f)
+    posts = [p for p in posts if p.get("file") != exclude_slug][:3]
+    if not posts:
+        return ""
+
+    cards = "\n".join(
+        f'<a class="related-card" href="../{p["file"]}"><img src="../{p["thumb"]}" alt="{p["title"]}">'
+        f'<span>{p["title"]}</span></a>'
+        for p in posts
+    )
+    return f'<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid">{cards}</div></div>'
+
+
 def save_post(article: dict):
     os.makedirs(POSTS_DIR, exist_ok=True)
     os.makedirs(os.path.join(DOCS_DIR, "thumbs"), exist_ok=True)
+
+    category = article.get("category", "라이프스타일")
+    theme = get_theme(category)
 
     slug = slugify(article["keyword"])
     today = datetime.now().strftime("%Y-%m-%d")
     thumb_filename = f"{slug}-{today}.jpg"
     post_filename = f"{slug}-{today}.html"
 
-    generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename))
+    generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme["gradient"])
 
     post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
     thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
@@ -496,6 +605,7 @@ def save_post(article: dict):
     title = article["title"]
     meta_description = article.get("meta_description", "")
     json_ld = build_json_ld(article, post_url, thumb_url, today)
+    related_html = _build_related_html(exclude_slug=f"posts/{post_filename}")
 
     html = POST_TEMPLATE.format(
         title=title,
@@ -508,11 +618,24 @@ def save_post(article: dict):
         json_ld=json_ld,
         ga_snippet=_ga_snippet(),
         adsense_snippet=_adsense_snippet(),
+        font=theme["font"],
+        font_family=_font_family_name(theme["font"]),
+        accent=theme["accent"],
+        badge=theme["badge"],
+        related_html=related_html,
     )
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
 
-    post_meta = {"title": title, "file": f"posts/{post_filename}", "thumb": f"thumbs/{thumb_filename}", "date": today}
+    post_meta = {
+        "title": title,
+        "file": f"posts/{post_filename}",
+        "thumb": f"thumbs/{thumb_filename}",
+        "date": today,
+        "category": category,
+        "accent": theme["accent"],
+        "badge": theme["badge"],
+    }
     return post_meta, json_ld, thumb_url
 
 
@@ -528,8 +651,11 @@ def update_index(new_post: dict) -> list:
         json.dump(posts, f, ensure_ascii=False, indent=2)
 
     items = "\n".join(
-        f'<li><a href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">{p["title"]}</a>'
-        f'<div class="date">{p["date"]}</div></li>'
+        f'<a class="card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
+        f'<div class="card-body"><span class="badge" style="background:{p.get("accent", "#4a90d9")}">'
+        f'{p.get("badge", "✨ 라이프스타일")}</span>'
+        f'<div class="card-title">{p["title"]}</div>'
+        f'<div class="date">{p["date"]}</div></div></a>'
         for p in posts
     )
     with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
@@ -599,10 +725,13 @@ def publish_to_blogger(article: dict, json_ld: str, thumb_url: str) -> None:
 
     try:
         access_token = _get_blogger_access_token()
+        theme = get_theme(article.get("category", "라이프스타일"))
 
         # 스키마 마크업(JSON-LD)을 본문 안에 함께 삽입 (대부분의 블로거 테마에서 script 태그 유지됨)
         content_html = (
             f'<img src="{thumb_url}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
+            f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
+            f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
             f'{article["html_body"]}'
             f'<script type="application/ld+json">{json_ld}</script>'
         )
