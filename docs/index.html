@@ -7,29 +7,48 @@
 <meta name="description" content=" - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="https://zeuswordpresss-namorin.github.io/my-auto-blog/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&family=Noto+Sans+KR:wght@700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
-  body { max-width: 900px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#fafafa; color:#1a1a1a; }
-  h1 { font-family: 'Jua', sans-serif; font-size: 2em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  body { max-width: 1000px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#f5f5f7; color:#1a1a1a; }
+  h1.site-title { font-family: 'Jua', sans-serif; font-size: 2em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom: 6px; }
   .dash-link { font-size: 0.4em; color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }
-  .card { text-decoration: none; color: #1a1a1a; background:#fff; border-radius: 14px; overflow:hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); transition: transform .15s ease, box-shadow .15s ease; }
-  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
-  .card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display:block; }
-  .card-body { padding: 14px 16px 18px; }
-  .badge { display:inline-block; font-size:0.72em; font-weight:700; color:#fff; padding:3px 10px; border-radius:999px; margin-bottom:8px; }
-  .card-title { font-weight: 700; font-size: 1.02em; line-height:1.4; }
-  .date { color: #999; font-size: 0.8em; margin-top: 6px; }
+  .tier-label { font-size: 0.85em; font-weight:900; color:#aaa; letter-spacing:2px; margin: 34px 0 12px; text-transform:uppercase; }
+  .tier-label:first-of-type { margin-top: 10px; }
+
+  /* 상단(TOP) - 히어로 1건, 가장 큰 임팩트 */
+  .hero { display:block; text-decoration:none; color:#1a1a1a; background:#fff; border-radius:20px; overflow:hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.10); }
+  .hero img { width:100%; aspect-ratio: 21/9; object-fit:cover; display:block; }
+  .hero-body { padding: 22px 26px 28px; }
+  .hero-badge { display:inline-block; font-size:0.8em; font-weight:700; color:#fff; padding:5px 14px; border-radius:999px; margin-bottom:12px; }
+  .hero-title { font-size: 1.7em; font-weight:800; line-height:1.35; }
+
+  /* 중단(MID) - 2단 그리드, 중간 크기 */
+  .mid-grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  .mid-card { text-decoration:none; color:#1a1a1a; background:#fff; border-radius:16px; overflow:hidden; box-shadow: 0 3px 14px rgba(0,0,0,0.08); transition: transform .15s ease; }
+  .mid-card:hover { transform: translateY(-3px); }
+  .mid-card img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
+  .mid-body { padding: 14px 16px 18px; }
+  .mid-title { font-weight:700; font-size:1.08em; line-height:1.4; }
+
+  /* 하단(BOTTOM) - 촘촘한 아카이브 그리드, 작은 크기 */
+  .bottom-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:14px; }
+  .bottom-card { text-decoration:none; color:#1a1a1a; background:#fff; border-radius:10px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .bottom-card img { width:100%; aspect-ratio:16/10; object-fit:cover; display:block; }
+  .bottom-body { padding: 8px 10px 12px; }
+  .bottom-title { font-weight:600; font-size:0.85em; line-height:1.35; }
+
+  .badge-sm { display:inline-block; font-size:0.65em; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:5px; }
+  .date { color: #999; font-size: 0.78em; margin-top: 5px; }
 </style>
 </head>
 <body>
-<h1> <a class="dash-link" href="dashboard.html">📊 성과관리</a></h1>
-<div class="grid">
-<a class="card" href="posts/재테크-방법-2026-07-09.html"><img src="thumbs/재테크-방법-2026-07-09.jpg" alt="초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!"><div class="card-body"><span class="badge" style="background:#11694f">💰 재테크</span><div class="card-title">초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!</div><div class="date">2026-07-09</div></div></a>
-<a class="card" href="posts/다이어트-식단-2026-07-09.html"><img src="thumbs/다이어트-식단-2026-07-09.jpg" alt="나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심"><div class="card-body"><span class="badge" style="background:#4a90d9">✨ 라이프스타일</span><div class="card-title">나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심</div><div class="date">2026-07-09</div></div></a>
-<a class="card" href="posts/여름-휴가지-추천-2026-07-09.html"><img src="thumbs/여름-휴가지-추천-2026-07-09.jpg" alt="잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천"><div class="card-body"><span class="badge" style="background:#4a90d9">✨ 라이프스타일</span><div class="card-title">잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천</div><div class="date">2026-07-09</div></div></a>
-<a class="card" href="posts/장마-2026-07-08.html"><img src="thumbs/장마-2026-07-08.jpg" alt="장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책"><div class="card-body"><span class="badge" style="background:#4a90d9">✨ 라이프스타일</span><div class="card-title">장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책</div><div class="date">2026-07-08</div></div></a>
-</div>
+<h1 class="site-title"> <a class="dash-link" href="dashboard.html">📊 성과관리</a></h1>
+
+<div class="tier-label">🔥 최신 이야기</div><a class="hero" href="posts/캠핑-용품-추천-2026-07-09.html"><img src="thumbs/캠핑-용품-추천-2026-07-09.jpg" alt="초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드"><div class="hero-body"><span class="hero-badge" style="background:#4a90d9">✨ 라이프스타일</span><div class="hero-title">초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드</div><div class="date">2026-07-09</div></div></a>
+<div class="tier-label">📖 다음 이야기</div><div class="mid-grid"><a class="mid-card" href="posts/재테크-방법-2026-07-09.html"><img src="thumbs/재테크-방법-2026-07-09.jpg" alt="초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!"><div class="mid-body"><span class="badge-sm" style="background:#11694f">💰 재테크</span><div class="mid-title">초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!</div><div class="date">2026-07-09</div></div></a>
+<a class="mid-card" href="posts/다이어트-식단-2026-07-09.html"><img src="thumbs/다이어트-식단-2026-07-09.jpg" alt="나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심"><div class="mid-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="mid-title">나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심</div><div class="date">2026-07-09</div></div></a></div>
+<div class="tier-label">🗂️ 지난 글 모아보기</div><div class="bottom-grid"><a class="bottom-card" href="posts/여름-휴가지-추천-2026-07-09.html"><img src="thumbs/여름-휴가지-추천-2026-07-09.jpg" alt="잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천</div></div></a>
+<a class="bottom-card" href="posts/장마-2026-07-08.html"><img src="thumbs/장마-2026-07-08.jpg" alt="장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책</div></div></a></div>
 </body>
 </html>
