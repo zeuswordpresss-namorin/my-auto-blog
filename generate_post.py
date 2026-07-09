@@ -21,6 +21,13 @@ v3에서 추가된 것:
      - ADSENSE_CLIENT_ID 설정 시 자동광고 스크립트 삽입, 실제 광고 형식/노출 빈도는
        애드센스 사이트의 "자동 광고" 메뉴에서 On/Off
   6. 대시보드에 애드센스 수익 확인 카드 추가
+
+v4에서 추가된 것 (저장소 통합):
+  7. 구글 블로거(Blogger) 동시 발행
+     - 같은 글/썸네일/스키마 마크업을 GitHub Pages뿐 아니라 Blogger 블로그에도 자동 발행
+     - OAuth 리프레시 토큰 방식이라 최초 1회만 인증하면 이후 자동 갱신됨
+     - Blogger 관련 Secrets 미설정 시 이 단계는 조용히 건너뛰고 GitHub Pages 발행은 그대로 진행
+       (별도의 "Blogger" 저장소/워크플로는 더 이상 필요 없음, 이 저장소 하나로 통합)
 """
 
 import hashlib
@@ -50,6 +57,12 @@ ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")  # 예: ca-pub-12345
 COUPANG_PARTNER_TAG = os.environ.get("COUPANG_PARTNER_TAG", "")
 COUPANG_ACCESS_KEY = os.environ.get("COUPANG_ACCESS_KEY", "")
 COUPANG_SECRET_KEY = os.environ.get("COUPANG_SECRET_KEY", "")
+
+# 구글 블로거 동시발행용 (최초 1회 OAuth 인증 후 자동 갱신되는 리프레시 토큰 방식)
+BLOGGER_BLOG_ID = os.environ.get("BLOGGER_BLOG_ID", "")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REFRESH_TOKEN = os.environ.get("GOOGLE_REFRESH_TOKEN", "")
 
 FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
@@ -466,7 +479,7 @@ def add_coupang_markup(article: dict) -> dict:
     return article
 
 
-def save_post(article: dict) -> dict:
+def save_post(article: dict):
     os.makedirs(POSTS_DIR, exist_ok=True)
     os.makedirs(os.path.join(DOCS_DIR, "thumbs"), exist_ok=True)
 
@@ -499,7 +512,8 @@ def save_post(article: dict) -> dict:
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
 
-    return {"title": title, "file": f"posts/{post_filename}", "thumb": f"thumbs/{thumb_filename}", "date": today}
+    post_meta = {"title": title, "file": f"posts/{post_filename}", "thumb": f"thumbs/{thumb_filename}", "date": today}
+    return post_meta, json_ld, thumb_url
 
 
 def update_index(new_post: dict) -> list:
@@ -551,6 +565,60 @@ def update_seo_files(posts: list) -> None:
         f.write(ROBOTS_TXT.format(site_url=SITE_URL))
 
 
+# ---------------------------------------------------------------------
+# 구글 블로거(Blogger) 동시 발행 - v4
+# ---------------------------------------------------------------------
+
+def _blogger_configured() -> bool:
+    return bool(BLOGGER_BLOG_ID and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN)
+
+
+def _get_blogger_access_token() -> str:
+    """리프레시 토큰으로 새 access token을 발급받습니다 (매 실행마다 자동, 사람 개입 불필요)."""
+    resp = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "refresh_token": GOOGLE_REFRESH_TOKEN,
+            "grant_type": "refresh_token",
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+def publish_to_blogger(article: dict, json_ld: str, thumb_url: str) -> None:
+    """같은 글을 구글 블로거에도 발행합니다. 미설정/실패해도 전체 파이프라인은 계속 진행됩니다."""
+    if not _blogger_configured():
+        print("  → [블로거] 관련 Secrets가 없어 건너뜁니다 (GitHub Pages만 발행).")
+        return
+    if not SITE_URL:
+        print("  → [블로거] 주의: SITE_URL이 없어 썸네일 이미지가 블로거에서 깨질 수 있습니다 (Variables에 SITE_URL 등록 권장).")
+
+    try:
+        access_token = _get_blogger_access_token()
+
+        # 스키마 마크업(JSON-LD)을 본문 안에 함께 삽입 (대부분의 블로거 테마에서 script 태그 유지됨)
+        content_html = (
+            f'<img src="{thumb_url}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
+            f'{article["html_body"]}'
+            f'<script type="application/ld+json">{json_ld}</script>'
+        )
+
+        url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOGGER_BLOG_ID}/posts/"
+        payload = {"title": article["title"], "content": content_html}
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        resp.raise_for_status()
+        result = resp.json()
+        print(f"  → [블로거] 발행 완료: {result.get('url', '(URL 확인 불가)')}")
+    except Exception as e:
+        print(f"  → [블로거] 발행 실패 (GitHub Pages 발행은 정상 진행됨): {e}")
+
+
 def run():
     title = get_title_from_args_or_queue()
     print(f"[처리 시작] 제목: {title}")
@@ -559,10 +627,11 @@ def run():
     print(f"  → 글 생성 완료: {article['title']}")
 
     article = add_coupang_markup(article)
-    post_meta = save_post(article)
+    post_meta, json_ld, thumb_url = save_post(article)
     posts = update_index(post_meta)
     update_dashboard(posts)
     update_seo_files(posts)
+    publish_to_blogger(article, json_ld, thumb_url)
 
     print(f"  → 저장 완료: docs/{post_meta['file']}, docs/{post_meta['thumb']}")
     print(f"  → 대시보드/사이트맵 갱신 완료")
