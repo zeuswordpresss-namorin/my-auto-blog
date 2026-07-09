@@ -52,6 +52,7 @@ from PIL import Image, ImageDraw, ImageFont
 # =====================================================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SITE_TITLE = os.environ.get("SITE_TITLE", "내 자동 블로그")
+SITE_TAGLINE = os.environ.get("SITE_TAGLINE", "매일 자동으로 업데이트되는 정보 큐레이션 블로그")
 SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")  # 예: https://아이디.github.io/my-auto-blog
 GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "")  # 예: G-XXXXXXXXXX
 ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")  # 예: ca-pub-1234567890123456
@@ -346,6 +347,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <title>{title}</title>
 <meta name="description" content="{meta_description}">
 <link rel="canonical" href="{canonical_url}">
+<link rel="icon" type="image/png" href="../favicon.png">
 <meta property="og:type" content="article">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{meta_description}">
@@ -414,6 +416,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <title>{site_title}</title>
 <meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="{site_url}/">
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="{fonts_url}" rel="stylesheet">
 <script type="application/ld+json">
@@ -421,9 +424,18 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 </script>{ga_snippet}{adsense_snippet}
 <style>
   * {{ box-sizing: border-box; }}
-  body {{ max-width: 1000px; margin: 0 auto; padding: 30px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#f5f5f7; color:#1a1a1a; }}
-  h1.site-title {{ font-family: 'Jua', sans-serif; font-size: 2em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom: 6px; }}
-  .dash-link {{ font-size: 0.4em; color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }}
+  body {{ max-width: 1000px; margin: 0 auto; padding: 0 0 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#f5f5f7; color:#1a1a1a; }}
+  .masthead {{ position: relative; margin-bottom: 26px; }}
+  .masthead img {{ width: 100%; aspect-ratio: 1600/420; object-fit: cover; display:block; }}
+  .masthead-inner {{ padding: 0 20px; }}
+  .brand-row {{ display:flex; align-items:center; gap:12px; margin: 18px 0 4px; }}
+  .brand-row img.logo {{ width:44px; height:44px; border-radius:50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
+  h1.site-title {{ font-family: 'Jua', sans-serif; font-size: 1.6em; margin:0; }}
+  .dash-link {{ margin-left:auto; font-size: 0.45em; color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }}
+  .intro {{ color:#555; font-size:0.95em; margin: 4px 0 16px; line-height:1.6; }}
+  .pill-row {{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 10px; }}
+  .pill {{ font-size:0.78em; font-weight:700; color:#fff; padding:5px 13px; border-radius:999px; }}
+  .content-wrap {{ padding: 0 20px; }}
   .tier-label {{ font-size: 0.85em; font-weight:900; color:#aaa; letter-spacing:2px; margin: 34px 0 12px; text-transform:uppercase; }}
   .tier-label:first-of-type {{ margin-top: 10px; }}
 
@@ -454,11 +466,24 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1 class="site-title">{site_title} <a class="dash-link" href="dashboard.html">📊 성과관리</a></h1>
+<div class="masthead">
+  <img src="banner.webp" alt="{site_title}">
+</div>
+<div class="masthead-inner">
+  <div class="brand-row">
+    <img class="logo" src="logo.webp" alt="{site_title} 로고">
+    <h1 class="site-title">{site_title}</h1>
+    <a class="dash-link" href="dashboard.html">📊 성과관리</a>
+  </div>
+  <p class="intro">{site_tagline}</p>
+  <div class="pill-row">{category_pills}</div>
+</div>
 
+<div class="content-wrap">
 {hero_html}
 {mid_html}
 {bottom_html}
+</div>
 </body>
 </html>
 """
@@ -673,6 +698,73 @@ def generate_thumbnail(title: str, output_path: str, theme: dict) -> None:
         y += lh + 20
 
     img.convert("RGB").save(output_path, format="WEBP", quality=82, method=6)
+
+
+# ---------------------------------------------------------------------
+# 브랜드 로고 / 메인 배너 - 사이트 전체에서 재사용되는 고정 아이덴티티
+# (카테고리별로 바뀌는 포스트 테마와 달리, 이건 "내 블로그"를 상징하는 고정 이미지)
+# ---------------------------------------------------------------------
+BRAND_GRADIENT = [(15, 23, 42), (30, 41, 59), (51, 65, 85)]
+BRAND_ACCENT = (250, 204, 21)  # 골드 포인트 (랜드마크처럼 눈에 띄는 시그니처 컬러)
+
+LOGO_SIZE = (512, 512)
+BANNER_SIZE = (1600, 420)
+
+
+def generate_site_logo(output_path: str) -> None:
+    """사이트 로고(정사각형) - 사이트 제목 첫 글자를 활용한 심볼 마크. 파비콘으로도 재사용됩니다."""
+    img = _make_gradient_background(LOGO_SIZE, BRAND_GRADIENT).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+    w, h = LOGO_SIZE
+
+    # 골드 링(랜드마크 느낌의 원형 프레임)
+    margin = 36
+    draw.ellipse([margin, margin, w - margin, h - margin], outline=BRAND_ACCENT + (255,), width=10)
+
+    initial = (SITE_TITLE.strip()[:1] or "B")
+    font = _load_font(220)
+    bbox = draw.textbbox((0, 0), initial, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text(((w - tw) / 2 - bbox[0], (h - th) / 2 - bbox[1]), initial, font=font, fill=(255, 255, 255, 255))
+
+    img.convert("RGB").save(output_path, format="WEBP", quality=90)
+
+
+def generate_site_banner(output_path: str) -> None:
+    """블로그 최상단 메인 배너(마스트헤드) - 브랜드 랜드마크 역할을 하는 시그니처 이미지."""
+    img = _make_gradient_background(BANNER_SIZE, BRAND_GRADIENT).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+    w, h = BANNER_SIZE
+
+    # 골드 포인트 라인 (상단 랜드마크 느낌의 장식 바)
+    draw.rectangle([(0, 0), (w, 8)], fill=BRAND_ACCENT + (255,))
+
+    title_font = _load_font(88)
+    tagline_font = _load_font(32)
+
+    tb = draw.textbbox((0, 0), SITE_TITLE, font=title_font)
+    tw = tb[2] - tb[0]
+    ty = h / 2 - 60
+    draw.text(((w - tw) / 2, ty), SITE_TITLE, font=title_font, fill=(255, 255, 255, 255))
+
+    lb = draw.textbbox((0, 0), SITE_TAGLINE, font=tagline_font)
+    lw = lb[2] - lb[0]
+    draw.text(((w - lw) / 2, ty + 110), SITE_TAGLINE, font=tagline_font, fill=BRAND_ACCENT + (255,))
+
+    img.convert("RGB").save(output_path, format="WEBP", quality=88)
+
+
+def ensure_brand_assets() -> None:
+    """로고/배너를 docs 루트에 항상 최신 상태로 준비해둡니다 (SITE_TITLE 변경 시 자동 반영)."""
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    logo_path = os.path.join(DOCS_DIR, "logo.webp")
+    generate_site_logo(logo_path)
+    generate_site_banner(os.path.join(DOCS_DIR, "banner.webp"))
+
+    # 파비콘은 webp 지원이 브라우저마다 달라 PNG로 별도 저장 (호환성)
+    favicon_path = os.path.join(DOCS_DIR, "favicon.png")
+    with Image.open(logo_path) as im:
+        im.convert("RGB").resize((64, 64)).save(favicon_path, format="PNG")
 
 
 def _coupang_deeplink(search_url: str):
@@ -924,13 +1016,19 @@ def update_index(new_post: dict) -> list:
         bottom_html = f'<div class="tier-label">🗂️ 지난 글 모아보기</div><div class="bottom-grid">{cards}</div>'
 
     with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
+        category_pills = "".join(
+            f'<span class="pill" style="background:{t["accent"]}">{t["badge"]}</span>'
+            for t in CATEGORY_THEMES.values()
+        )
         f.write(INDEX_TEMPLATE.format(
             site_title=SITE_TITLE,
+            site_tagline=SITE_TAGLINE,
             site_url=SITE_URL or ".", ga_snippet=_ga_snippet(),
             adsense_snippet=_adsense_snippet(),
             fonts_url=_google_fonts_url(),
             hero_html=hero_html, mid_html=mid_html, bottom_html=bottom_html,
             blog_json_ld=build_blog_index_json_ld(posts),
+            category_pills=category_pills,
         ))
 
     return posts
@@ -1024,9 +1122,23 @@ def publish_to_blogger(article: dict, json_ld: str, thumb_url: str, local_thumb_
         print(f"  → [블로거] 발행 실패 (GitHub Pages 발행은 정상 진행됨): {e}")
 
 
+def ensure_nojekyll() -> None:
+    """GitHub Pages가 Jekyll로 문서를 가공하지 않고 있는 그대로 서빙하게 합니다.
+    이 파일이 없으면 Jekyll이 파일명/구조를 자기 방식대로 해석하면서
+    링크가 깨지거나 일부 파일이 누락되는 문제가 생길 수 있습니다."""
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    nojekyll_path = os.path.join(DOCS_DIR, ".nojekyll")
+    if not os.path.exists(nojekyll_path):
+        open(nojekyll_path, "w").close()
+        print("  → [설정] .nojekyll 파일 생성 (Jekyll 가공 비활성화)")
+
+
 def run():
     title = get_title_from_args_or_queue()
     print(f"[처리 시작] 제목: {title}")
+
+    ensure_nojekyll()
+    ensure_brand_assets()
 
     article = generate_article(title)
     print(f"  → 글 생성 완료: {article['title']}")
@@ -1051,3 +1163,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
+
