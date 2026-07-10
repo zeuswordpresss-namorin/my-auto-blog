@@ -55,6 +55,7 @@ SITE_TITLE = os.environ.get("SITE_TITLE", "내 자동 블로그")
 SITE_TAGLINE = os.environ.get("SITE_TAGLINE", "매일 자동으로 업데이트되는 정보 큐레이션 블로그")
 SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")  # 예: https://아이디.github.io/my-auto-blog
 GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "")  # 예: G-XXXXXXXXXX
+GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION", "")  # 서치콘솔 HTML 태그 인증용 코드
 ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")  # 예: ca-pub-1234567890123456
 ADSENSE_SLOT_ID = os.environ.get("ADSENSE_SLOT_ID", "")  # 애드센스에서 만든 "디스플레이 광고" 단위 ID (수동 배치용)
 
@@ -87,6 +88,9 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
 아래 규칙을 지켜 작성하세요:
 1. 제목은 검색 의도를 반영하되 과장/낚시성 표현은 피한다. 가능하면 "무직자 비상금 대출 조건 서류"처럼
    3~4개 단어가 조합된 구체적인 롱테일 키워드형 제목을 쓴다 (단, 입력받은 키워드의 의미를 벗어나지 않는다).
+   제목은 25~40자 내외로, 구글 검색결과에서 잘리지 않게 한다.
+1-1. meta_description은 검색결과 스니펫에 노출되는 요약문이다. 핵심 키워드를 앞부분에 배치하고,
+   클릭을 유도하는 문장으로 100~140자 내외로 작성한다 (너무 짧거나 500자를 넘지 않게 한다).
 2. 소제목(H2)을 4~6개 사용해 구조화한다.
 3. 확인되지 않은 구체적 수치·통계·자격요건·금리·지원금액을 지어내지 않는다. 모르면 "기관별로 다를 수 있다" 식으로
    일반화해서 쓰고, 절대 구체적 숫자를 추측해서 채우지 않는다.
@@ -236,6 +240,12 @@ def build_decor_html(theme: dict, seed: str) -> str:
     return '<div class="decor-layer" aria-hidden="true">' + "".join(items) + "</div>"
 
 
+def _search_console_meta() -> str:
+    if not GOOGLE_SITE_VERIFICATION:
+        return ""
+    return f'\n<meta name="google-site-verification" content="{GOOGLE_SITE_VERIFICATION}">'
+
+
 def _ga_snippet() -> str:
     if not GA_MEASUREMENT_ID:
         return ""
@@ -261,11 +271,13 @@ def _adsense_snippet() -> str:
     )
 
 
-def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str) -> str:
-    """AI가 고른 스키마 타입(schema_type)에 맞춰 JSON-LD 구조화 데이터를 만듭니다."""
+def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, platform: str = "github") -> str:
+    """AI가 고른 스키마 타입(schema_type)에 맞춰 JSON-LD 구조화 데이터를 만듭니다.
+    platform="blogger"면 일반 Article 대신 BlogPosting 타입을 사용합니다 (블로그 플랫폼 권장 스키마)."""
     schema_type = article.get("schema_type", "Article")
     title = article["title"]
     meta_description = article.get("meta_description", "")
+    article_type = "BlogPosting" if platform == "blogger" else "Article"
 
     if schema_type == "FAQPage" and article.get("faq_items"):
         data = {
@@ -292,10 +304,10 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str) 
             ],
         }
     else:
-        schema_type = "Article"
+        schema_type = article_type
         data = {
             "@context": "https://schema.org",
-            "@type": "Article",
+            "@type": article_type,
             "headline": title,
             "description": meta_description,
             "image": thumb_url,
@@ -347,7 +359,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <title>{title}</title>
 <meta name="description" content="{meta_description}">
 <link rel="canonical" href="{canonical_url}">
-<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="icon" type="image/png" href="../favicon.png">{search_console_meta}
 <meta property="og:type" content="article">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{meta_description}">
@@ -388,7 +400,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 {decor_html}
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
-<div class="hero"><img src="../thumbs/{thumb_filename}" alt="{title}"></div>
+<div class="hero"><img src="../thumbs/{thumb_filename}" alt="{title}" loading="eager" fetchpriority="high"></div>
 <span class="badge">{badge}</span>
 <h1>{title}</h1>
 <p class="meta">{date}</p>
@@ -416,7 +428,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <title>{site_title}</title>
 <meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="{site_url}/">
-<link rel="icon" type="image/png" href="favicon.png">
+<link rel="icon" type="image/png" href="favicon.png">{search_console_meta}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="{fonts_url}" rel="stylesheet">
 <script type="application/ld+json">
@@ -463,11 +475,14 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 
   .badge-sm {{ display:inline-block; font-size:0.65em; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:5px; }}
   .date {{ color: #999; font-size: 0.78em; margin-top: 5px; }}
+  .site-footer {{ margin-top: 50px; padding: 24px 20px; border-top: 1px solid #e2e2e2; text-align:center; color:#999; font-size:0.82em; }}
+  .site-footer a {{ color:#777; text-decoration:none; margin: 0 8px; }}
+  .site-footer a:hover {{ color:#b45309; }}
 </style>
 </head>
 <body>
 <div class="masthead">
-  <img src="banner.webp" alt="{site_title}">
+  <img src="banner.webp" alt="{site_title}" loading="eager" fetchpriority="high">
 </div>
 <div class="masthead-inner">
   <div class="brand-row">
@@ -484,6 +499,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 {mid_html}
 {bottom_html}
 </div>
+{footer_html}
 </body>
 </html>
 """
@@ -617,6 +633,13 @@ def generate_article(title: str) -> dict:
             decoder = json.JSONDecoder()
             article, _ = decoder.raw_decode(cleaned)
             article["keyword"] = title
+
+            # meta_description 길이 안전장치 (검색결과 스니펫 잘림/과다 방지)
+            desc = article.get("meta_description", "").strip()
+            if len(desc) > 160:
+                desc = desc[:157].rstrip() + "..."
+            article["meta_description"] = desc
+
             return article
         except (KeyError, IndexError) as e:
             raise ValueError(f"Gemini 응답 형식이 예상과 다릅니다: {e}")
@@ -816,26 +839,35 @@ def add_ymyl_disclaimer(article: dict) -> dict:
 
 
 def add_internal_link(article: dict) -> dict:
-    """같은 카테고리의 이전 글이 있으면 본문 도입부 바로 아래에 자연스럽게 내부링크를 삽입합니다
-    (내부 순환 유도 → 체류시간/페이지뷰 증가)."""
+    """내부링크를 2곳에 삽입해 순환을 강화합니다 (체류시간/페이지뷰 증가):
+    1) 도입부 바로 아래 - 같은 카테고리의 이전 글
+    2) 본문 끝 - 카테고리 무관 전체 최신글 (같은 카테고리 글과 중복되지 않게)"""
     category = article.get("category", "라이프스타일")
     if not os.path.exists(POSTS_JSON):
         return article
     with open(POSTS_JSON, "r", encoding="utf-8") as f:
         posts = json.load(f)
-    candidates = [p for p in posts if p.get("category") == category]
-    if not candidates:
+    if not posts:
         return article
 
-    pick = candidates[0]
-    link_html = f'<p>📌 관련해서 <a href="../{pick["file"]}">{pick["title"]}</a>도 함께 참고해보세요.</p>'
+    same_category = [p for p in posts if p.get("category") == category]
 
-    idx = article["html_body"].find("</p>")
-    if idx != -1:
-        insert_at = idx + len("</p>")
-        article["html_body"] = article["html_body"][:insert_at] + link_html + article["html_body"][insert_at:]
-    else:
-        article["html_body"] = link_html + article["html_body"]
+    if same_category:
+        pick = same_category[0]
+        link_html = f'<p>📌 관련해서 <a href="../{pick["file"]}">{pick["title"]}</a>도 함께 참고해보세요.</p>'
+        idx = article["html_body"].find("</p>")
+        if idx != -1:
+            insert_at = idx + len("</p>")
+            article["html_body"] = article["html_body"][:insert_at] + link_html + article["html_body"][insert_at:]
+        else:
+            article["html_body"] = link_html + article["html_body"]
+
+    others = [p for p in posts if p.get("file") != (same_category[0]["file"] if same_category else None)]
+    if others:
+        pick2 = others[0]
+        link2_html = f'<p>🔗 이 글도 많이 찾아보세요: <a href="../{pick2["file"]}">{pick2["title"]}</a></p>'
+        article["html_body"] += link2_html
+
     return article
 
 
@@ -902,7 +934,7 @@ def _build_related_html(exclude_slug: str) -> str:
         return ""
 
     cards = "\n".join(
-        f'<a class="related-card" href="../{p["file"]}"><img src="../{p["thumb"]}" alt="{p["title"]}">'
+        f'<a class="related-card" href="../{p["file"]}"><img src="../{p["thumb"]}" alt="{p["title"]}" loading="lazy">'
         f'<span>{p["title"]}</span></a>'
         for p in posts
     )
@@ -950,6 +982,7 @@ def save_post(article: dict):
         related_html=related_html,
         decor_html=decor_html,
         bottom_ad=_manual_ad_unit(),
+        search_console_meta=_search_console_meta(),
     )
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
@@ -964,7 +997,7 @@ def save_post(article: dict):
         "badge": theme["badge"],
     }
     local_thumb_path = os.path.join(DOCS_DIR, "thumbs", thumb_filename)
-    return post_meta, json_ld, thumb_url, local_thumb_path
+    return post_meta, json_ld, thumb_url, local_thumb_path, post_url
 
 
 def update_index(new_post: dict) -> list:
@@ -985,7 +1018,7 @@ def update_index(new_post: dict) -> list:
         p = hero_posts[0]
         hero_html = (
             '<div class="tier-label">🔥 최신 이야기</div>'
-            f'<a class="hero" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
+            f'<a class="hero" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}" loading="eager" fetchpriority="high">'
             f'<div class="hero-body"><span class="hero-badge" style="background:{p.get("accent", "#4a90d9")}">'
             f'{p.get("badge", "✨ 라이프스타일")}</span>'
             f'<div class="hero-title">{p["title"]}</div>'
@@ -995,7 +1028,7 @@ def update_index(new_post: dict) -> list:
     mid_html = ""
     if mid_posts:
         cards = "\n".join(
-            f'<a class="mid-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
+            f'<a class="mid-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}" loading="lazy">'
             f'<div class="mid-body"><span class="badge-sm" style="background:{p.get("accent", "#4a90d9")}">'
             f'{p.get("badge", "✨ 라이프스타일")}</span>'
             f'<div class="mid-title">{p["title"]}</div>'
@@ -1007,7 +1040,7 @@ def update_index(new_post: dict) -> list:
     bottom_html = ""
     if bottom_posts:
         cards = "\n".join(
-            f'<a class="bottom-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}">'
+            f'<a class="bottom-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}" loading="lazy">'
             f'<div class="bottom-body"><span class="badge-sm" style="background:{p.get("accent", "#4a90d9")}">'
             f'{p.get("badge", "✨ 라이프스타일")}</span>'
             f'<div class="bottom-title">{p["title"]}</div></div></a>'
@@ -1029,9 +1062,94 @@ def update_index(new_post: dict) -> list:
             hero_html=hero_html, mid_html=mid_html, bottom_html=bottom_html,
             blog_json_ld=build_blog_index_json_ld(posts),
             category_pills=category_pills,
+            search_console_meta=_search_console_meta(),
+            footer_html=build_footer_html(),
         ))
 
     return posts
+
+
+STATIC_PAGE_TEMPLATE = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{page_title} - {site_title}</title>
+<link rel="icon" type="image/png" href="favicon.png">{search_console_meta}{ga_snippet}{adsense_snippet}
+<style>
+  body {{ max-width: 680px; margin: 0 auto; padding: 40px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.8; color: #222; }}
+  h1 {{ font-size: 1.6em; }}
+  h2 {{ font-size: 1.15em; margin-top: 1.6em; }}
+  a.back {{ color: #4a90d9; text-decoration: none; display:inline-block; margin-bottom: 20px; }}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← 홈으로</a>
+<h1>{page_title}</h1>
+{page_body}
+</body>
+</html>
+"""
+
+
+def build_footer_html() -> str:
+    return (
+        '<div class="site-footer">'
+        '<a href="about.html">블로그 소개</a>·'
+        '<a href="privacy.html">개인정보처리방침</a>·'
+        '<a href="contact.html">문의하기</a>'
+        f'<div style="margin-top:8px;">© {datetime.now().year} {SITE_TITLE}</div>'
+        '</div>'
+    )
+
+
+def generate_static_pages() -> None:
+    """About / Privacy Policy / Contact 페이지를 생성합니다 (SEO 신뢰도 + 애드센스 승인 필수요건).
+    이미 있으면 건드리지 않고, 없을 때만 새로 만듭니다 (직접 문구를 수정해도 덮어쓰지 않기 위함)."""
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    common_kwargs = dict(
+        site_title=SITE_TITLE,
+        search_console_meta=_search_console_meta(),
+        ga_snippet=_ga_snippet(),
+        adsense_snippet=_adsense_snippet(),
+    )
+
+    pages = {
+        "about.html": (
+            "블로그 소개",
+            f"<p>{SITE_TITLE}에 오신 것을 환영합니다.</p>"
+            f"<p>{SITE_TAGLINE}</p>"
+            "<p>이 블로그는 다양한 주제의 정보를 정리해서 소개하며, 콘텐츠 제작 과정 일부에 "
+            "AI 도구를 활용하고 있습니다. 게시된 정보는 참고용이며, 중요한 결정을 내리실 때는 "
+            "반드시 공식 출처를 함께 확인해주세요.</p>",
+        ),
+        "privacy.html": (
+            "개인정보처리방침",
+            "<p>본 블로그는 구글 애널리틱스(GA4) 및 구글 애드센스를 통해 방문자 통계와 광고를 "
+            "제공할 수 있습니다. 이 과정에서 쿠키(Cookie)가 사용될 수 있으며, 쿠키를 통해 "
+            "수집되는 정보에는 개인을 직접 식별할 수 있는 정보는 포함되지 않습니다.</p>"
+            "<h2>쿠키 및 광고</h2>"
+            "<p>구글을 포함한 제3자 광고 공급업체는 쿠키를 사용하여 사용자의 이전 방문 기록을 "
+            "기반으로 광고를 게재합니다. 이용자는 "
+            '<a href="https://adssettings.google.com" target="_blank">구글 광고 설정</a>에서 '
+            "맞춤 광고를 비활성화할 수 있습니다.</p>"
+            "<h2>문의</h2>"
+            "<p>개인정보 관련 문의사항은 문의하기 페이지를 통해 연락 주시기 바랍니다.</p>",
+        ),
+        "contact.html": (
+            "문의하기",
+            "<p>블로그 콘텐츠 관련 문의, 협업 제안, 오류 신고 등은 아래 이메일로 연락 주세요.</p>"
+            "<p><b>이메일:</b> 이 페이지의 문구를 직접 열어 본인의 연락처로 수정해주세요.</p>",
+        ),
+    }
+
+    for filename, (page_title, page_body) in pages.items():
+        path = os.path.join(DOCS_DIR, filename)
+        if os.path.exists(path):
+            continue  # 이미 있으면 (직접 수정했을 수 있으니) 덮어쓰지 않음
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(STATIC_PAGE_TEMPLATE.format(page_title=page_title, page_body=page_body, **common_kwargs))
+        print(f"  → [설정] {filename} 생성됨 (내용은 실제 정보로 직접 수정 권장)")
 
 
 def update_dashboard(posts: list) -> None:
@@ -1096,7 +1214,7 @@ def _make_blogger_safe_html(html_body: str) -> str:
     return html_body
 
 
-def publish_to_blogger(article: dict, json_ld: str, thumb_url: str, local_thumb_path: str) -> None:
+def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_thumb_path: str) -> None:
     """같은 글을 구글 블로거에도 발행합니다. 미설정/실패해도 전체 파이프라인은 계속 진행됩니다."""
     if not _blogger_configured():
         print("  → [블로거] 관련 Secrets가 없어 건너뜁니다 (GitHub Pages만 발행).")
@@ -1105,6 +1223,9 @@ def publish_to_blogger(article: dict, json_ld: str, thumb_url: str, local_thumb_
     try:
         access_token = _get_blogger_access_token()
         theme = get_theme(article.get("category", "라이프스타일"))
+        today = datetime.now().strftime("%Y-%m-%d")
+        # 블로거 채널에는 Article 대신 BlogPosting 스키마 사용 (블로그 플랫폼 권장 타입)
+        blogger_json_ld = build_json_ld(article, canonical_url, thumb_url, today, platform="blogger")
 
         # 썸네일을 외부 URL 링크가 아니라 base64로 직접 본문에 박아 넣습니다.
         # → SITE_URL 설정 여부나 GitHub Pages 배포 상태와 무관하게 이미지가 항상 정상 표시됩니다
@@ -1122,7 +1243,7 @@ def publish_to_blogger(article: dict, json_ld: str, thumb_url: str, local_thumb_
             f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
             f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
             f'{_make_blogger_safe_html(article["html_body"])}'
-            f'<script type="application/ld+json">{json_ld}</script>'
+            f'<script type="application/ld+json">{blogger_json_ld}</script>'
         )
 
         url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOGGER_BLOG_ID}/posts/"
@@ -1154,6 +1275,7 @@ def run():
 
     ensure_nojekyll()
     ensure_brand_assets()
+    generate_static_pages()
 
     article = generate_article(title)
     print(f"  → 글 생성 완료: {article['title']}")
@@ -1162,11 +1284,11 @@ def run():
     article = insert_manual_ads(article)
     article = add_coupang_markup(article)
     article = add_ymyl_disclaimer(article)
-    post_meta, json_ld, thumb_url, local_thumb_path = save_post(article)
+    post_meta, json_ld, thumb_url, local_thumb_path, post_url = save_post(article)
     posts = update_index(post_meta)
     update_dashboard(posts)
     update_seo_files(posts)
-    publish_to_blogger(article, json_ld, thumb_url, local_thumb_path)
+    publish_to_blogger(article, post_url, thumb_url, local_thumb_path)
 
     print(f"  → 저장 완료: docs/{post_meta['file']}, docs/{post_meta['thumb']}")
     print(f"  → 대시보드/사이트맵 갱신 완료")
