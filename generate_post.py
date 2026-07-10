@@ -275,6 +275,24 @@ def _ga_snippet() -> str:
 </script>"""
 
 
+ENABLE_AUTO_TRANSLATE = os.environ.get("ENABLE_AUTO_TRANSLATE", "true").strip().lower() != "false"
+
+
+def _translate_widget() -> str:
+    """구글 번역 위젯(무료, API 키 불필요)을 삽입합니다.
+    방문자의 브라우저 언어가 한국어가 아니면 구글이 자동으로 번역 배너를 보여줍니다."""
+    if not ENABLE_AUTO_TRANSLATE:
+        return ""
+    return """
+<div id="google_translate_element" class="translate-widget"></div>
+<script>
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({pageLanguage: 'ko', autoDisplay: true}, 'google_translate_element');
+}
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>"""
+
+
 def _adsense_snippet() -> str:
     """구글 애드센스 자동광고 스크립트. 이 한 줄만 있으면 배너/전면(interstitial)/앵커 광고를
     구글이 페이지 내용에 맞게 자동으로 배치합니다 (실제 On/Off 및 광고 형식 세부설정은
@@ -392,27 +410,47 @@ POST_TEMPLATE = """<!DOCTYPE html>
 </script>{ga_snippet}{adsense_snippet}
 <style>
   * {{ box-sizing: border-box; }}
-  body {{ position: relative; max-width: 720px; margin: 0 auto; padding: 0 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.75; color: #1a1a1a; background: #fafafa; overflow-x: hidden; }}
+  html {{ -webkit-text-size-adjust: 100%; }}
+  body {{ position: relative; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 20px) 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.75; color: #1a1a1a; background: #fafafa; overflow-x: hidden; }}
+  img {{ max-width: 100%; height: auto; }}
   .decor-layer {{ position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }}
   .decor-item {{ position: absolute; filter: grayscale(0%); user-select: none; }}
   .content {{ position: relative; z-index: 1; }}
   .hero {{ margin: 0 -20px 24px; position: relative; }}
   .hero img {{ width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }}
-  .badge {{ display: inline-block; background: {accent}; color: #fff; font-size: 0.8em; font-weight: 700; padding: 5px 14px; border-radius: 999px; margin: 20px 0 10px; }}
-  h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: 1.9em; line-height: 1.35; margin: 0 0 8px; }}
-  h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: 1.35em; margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; position: relative; z-index: 1; }}
+  .badge {{ display: inline-block; background: {accent}; color: #fff; font-size: clamp(0.75em, 2.2vw, 0.85em); font-weight: 700; padding: 5px 14px; border-radius: 999px; margin: 20px 0 10px; }}
+  h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.4em, 5vw, 1.9em); line-height: 1.35; margin: 0 0 8px; word-break: keep-all; }}
+  h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }}
   p {{ margin: 1em 0; position: relative; z-index: 1; }}
+  table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; }}
   a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }}
   .meta {{ color: #999; font-size: 0.85em; margin-bottom: 4px; }}
   .related {{ margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }}
   .related h3 {{ font-size: 1.1em; margin-bottom: 14px; }}
-  .related-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }}
+  .related-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }}
   .related-card {{ text-decoration: none; color: #1a1a1a; }}
   .related-card img {{ width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; margin-bottom: 6px; }}
   .related-card span {{ font-size: 0.88em; font-weight: 500; }}
+  .post-nav {{ display: flex; justify-content: space-between; gap: 10px; margin: 30px 0; flex-wrap: wrap; }}
+  .post-nav a {{ display: flex; align-items: center; gap: 8px; text-decoration: none; color: #333; background: #fff; border: 1px solid #eee; border-radius: 999px; padding: 6px 16px 6px 6px; font-size: 0.85em; max-width: 100%; }}
+  .post-nav img {{ width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }}
+  .post-nav .nav-icon {{ width: 28px; height: 28px; border-radius: 50%; background: {accent}; color: #fff; display:flex; align-items:center; justify-content:center; font-size: 14px; flex-shrink: 0; }}
+  .post-nav span {{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+  @media (max-width: 480px) {{
+    .related-grid {{ grid-template-columns: 1fr 1fr; }}
+    .post-nav a {{ font-size: 0.78em; flex: 1 1 100%; }}
+  }}
+  @media (min-width: 900px) {{
+    body {{ max-width: 760px; }}
+  }}
+  .translate-widget {{ position: fixed; top: 10px; right: 10px; z-index: 999; font-size: 0.8em; }}
+  body {{ top: 0 !important; }}
+  .goog-te-banner-frame {{ display: none !important; }}
+</style>
 </style>
 </head>
 <body>
+{translate_widget}
 {decor_html}
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
@@ -421,6 +459,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <h1>{title}</h1>
 <p class="meta">{date}</p>
 {html_body}
+{post_nav}
 {related_html}
 {bottom_ad}
 </div>
@@ -452,27 +491,29 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 </script>{ga_snippet}{adsense_snippet}
 <style>
   * {{ box-sizing: border-box; }}
+  html {{ -webkit-text-size-adjust: 100%; }}
   body {{ max-width: 1000px; margin: 0 auto; padding: 0 0 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#f5f5f7; color:#1a1a1a; }}
+  img {{ max-width: 100%; height: auto; }}
   .masthead {{ position: relative; margin-bottom: 26px; }}
   .masthead img {{ width: 100%; aspect-ratio: 1600/420; object-fit: cover; display:block; }}
-  .masthead-inner {{ padding: 0 20px; }}
-  .brand-row {{ display:flex; align-items:center; gap:12px; margin: 18px 0 4px; }}
+  .masthead-inner {{ padding: 0 clamp(14px, 4vw, 20px); }}
+  .brand-row {{ display:flex; align-items:center; gap:12px; margin: 18px 0 4px; flex-wrap: wrap; }}
   .brand-row img.logo {{ width:44px; height:44px; border-radius:50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
-  h1.site-title {{ font-family: 'Jua', sans-serif; font-size: 1.6em; margin:0; }}
-  .dash-link {{ margin-left:auto; font-size: 0.45em; color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }}
-  .intro {{ color:#555; font-size:0.95em; margin: 4px 0 16px; line-height:1.6; }}
+  h1.site-title {{ font-family: 'Jua', sans-serif; font-size: clamp(1.2em, 4.5vw, 1.6em); margin:0; word-break: keep-all; }}
+  .dash-link {{ margin-left:auto; font-size: clamp(0.7em, 2.5vw, 0.75em); color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }}
+  .intro {{ color:#555; font-size:0.95em; margin: 4px 0 16px; line-height:1.6; word-break: keep-all; }}
   .pill-row {{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 10px; }}
   .pill {{ font-size:0.78em; font-weight:700; color:#fff; padding:5px 13px; border-radius:999px; }}
-  .content-wrap {{ padding: 0 20px; }}
+  .content-wrap {{ padding: 0 clamp(14px, 4vw, 20px); }}
   .tier-label {{ font-size: 0.85em; font-weight:900; color:#aaa; letter-spacing:2px; margin: 34px 0 12px; text-transform:uppercase; }}
   .tier-label:first-of-type {{ margin-top: 10px; }}
 
   /* 상단(TOP) - 히어로 1건, 가장 큰 임팩트 */
   .hero {{ display:block; text-decoration:none; color:#1a1a1a; background:#fff; border-radius:20px; overflow:hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.10); }}
   .hero img {{ width:100%; aspect-ratio: 21/9; object-fit:cover; display:block; }}
-  .hero-body {{ padding: 22px 26px 28px; }}
+  .hero-body {{ padding: clamp(16px, 4vw, 22px) clamp(18px, 5vw, 26px) 28px; }}
   .hero-badge {{ display:inline-block; font-size:0.8em; font-weight:700; color:#fff; padding:5px 14px; border-radius:999px; margin-bottom:12px; }}
-  .hero-title {{ font-size: 1.7em; font-weight:800; line-height:1.35; }}
+  .hero-title {{ font-size: clamp(1.25em, 4.5vw, 1.7em); font-weight:800; line-height:1.35; word-break: keep-all; }}
 
   /* 중단(MID) - 2단 그리드, 중간 크기 */
   .mid-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:18px; }}
@@ -480,23 +521,37 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   .mid-card:hover {{ transform: translateY(-3px); }}
   .mid-card img {{ width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }}
   .mid-body {{ padding: 14px 16px 18px; }}
-  .mid-title {{ font-weight:700; font-size:1.08em; line-height:1.4; }}
+  .mid-title {{ font-weight:700; font-size:clamp(0.92em, 3vw, 1.08em); line-height:1.4; word-break: keep-all; }}
 
   /* 하단(BOTTOM) - 촘촘한 아카이브 그리드, 작은 크기 */
-  .bottom-grid {{ display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:14px; }}
+  .bottom-grid {{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:14px; }}
   .bottom-card {{ text-decoration:none; color:#1a1a1a; background:#fff; border-radius:10px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
   .bottom-card img {{ width:100%; aspect-ratio:16/10; object-fit:cover; display:block; }}
   .bottom-body {{ padding: 8px 10px 12px; }}
-  .bottom-title {{ font-weight:600; font-size:0.85em; line-height:1.35; }}
+  .bottom-title {{ font-weight:600; font-size:0.85em; line-height:1.35; word-break: keep-all; }}
 
   .badge-sm {{ display:inline-block; font-size:0.65em; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:5px; }}
   .date {{ color: #999; font-size: 0.78em; margin-top: 5px; }}
   .site-footer {{ margin-top: 50px; padding: 24px 20px; border-top: 1px solid #e2e2e2; text-align:center; color:#999; font-size:0.82em; }}
   .site-footer a {{ color:#777; text-decoration:none; margin: 0 8px; }}
   .site-footer a:hover {{ color:#b45309; }}
+
+  @media (max-width: 480px) {{
+    .masthead img {{ aspect-ratio: 1600/620; }}
+    .hero img {{ aspect-ratio: 16/9; }}
+    .mid-grid {{ grid-template-columns: 1fr; gap: 14px; }}
+    .bottom-grid {{ grid-template-columns: repeat(2, 1fr); }}
+  }}
+  @media (min-width: 1000px) {{
+    .bottom-grid {{ grid-template-columns: repeat(5, 1fr); }}
+  }}
+  .translate-widget {{ position: fixed; top: 10px; right: 10px; z-index: 999; font-size: 0.8em; }}
+  body {{ top: 0 !important; }}
+  .goog-te-banner-frame {{ display: none !important; }}
 </style>
 </head>
 <body>
+{translate_widget}
 <div class="masthead">
   <img src="banner.webp" alt="{site_title}" loading="eager" fetchpriority="high">
 </div>
@@ -723,7 +778,7 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     seed = int(hashlib.md5(title.encode("utf-8")).hexdigest(), 16) % 100000
     illustration = _fetch_illustration(category, THUMB_SIZE, seed)
     if illustration is not None:
-        img = Image.blend(img, illustration, alpha=0.38)
+        img = Image.blend(img, illustration, alpha=0.10)
 
     draw = ImageDraw.Draw(img)
     accent_rgb = _hex_to_rgb(theme["accent"])
@@ -979,6 +1034,26 @@ def _font_family_name(font_param: str) -> str:
     return font_param.split(":")[0].replace("+", " ")
 
 
+def _build_post_nav_html() -> str:
+    """이전 게시물(작은 썸네일 아이콘) + 최신 게시물(홈 아이콘)로 가는 작은 네비게이션 바를 만듭니다."""
+    prev_post = None
+    if os.path.exists(POSTS_JSON):
+        with open(POSTS_JSON, "r", encoding="utf-8") as f:
+            posts = json.load(f)
+        if posts:
+            prev_post = posts[0]  # 지금 막 만드는 글보다 이전(직전)에 발행된 글
+
+    prev_html = (
+        f'<a href="../{prev_post["file"]}"><img src="../{prev_post["thumb"]}" alt="이전 게시물">'
+        f'<span>← 이전 게시물: {prev_post["title"]}</span></a>'
+        if prev_post else
+        '<a href="../index.html"><span class="nav-icon">🏠</span><span>목록으로</span></a>'
+    )
+    latest_html = '<a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a>'
+
+    return f'<div class="post-nav">{prev_html}{latest_html}</div>'
+
+
 def _build_related_html(exclude_slug: str) -> str:
     """이전에 발행된 글 중 최신 3개를 관련글로 보여줍니다 (체류시간/페이지뷰 증가 → 광고수익에 도움)."""
     if not os.path.exists(POSTS_JSON):
@@ -1018,6 +1093,7 @@ def save_post(article: dict):
     meta_description = article.get("meta_description", "")
     json_ld = build_json_ld(article, post_url, thumb_url, today)
     related_html = _build_related_html(exclude_slug=f"posts/{post_filename}")
+    post_nav = _build_post_nav_html()
     decor_html = build_decor_html(theme, seed=slug)
 
     html = POST_TEMPLATE.format(
@@ -1036,9 +1112,11 @@ def save_post(article: dict):
         accent=theme["accent"],
         badge=theme["badge"],
         related_html=related_html,
+        post_nav=post_nav,
         decor_html=decor_html,
         bottom_ad=_manual_ad_unit(),
         search_console_meta=_search_console_meta(),
+        translate_widget=_translate_widget(),
     )
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
@@ -1120,6 +1198,7 @@ def update_index(new_post: dict) -> list:
             category_pills=category_pills,
             search_console_meta=_search_console_meta(),
             footer_html=build_footer_html(),
+            translate_widget=_translate_widget(),
         ))
 
     return posts
