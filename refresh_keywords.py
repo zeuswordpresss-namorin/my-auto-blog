@@ -24,20 +24,34 @@ import xml.etree.ElementTree as ET
 import requests
 
 QUEUE_FILE = "keywords_queue.json"
-TRENDS_RSS_URL = "https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR"
+# 구글이 트렌드 서비스 주소를 개편하면서 RSS 경로가 바뀌었습니다.
+# 최신 주소를 우선 시도하고, 혹시 또 바뀌면 예전 주소로 한 번 더 시도합니다.
+TRENDS_RSS_URLS = [
+    "https://trends.google.com/trending/rss?geo=KR",
+    "https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR",  # 예전 주소 (혹시 몰라 대비용)
+]
 TOP_N = 7
 
 
 def fetch_top_trends(n: int = TOP_N) -> list[str]:
-    """구글 트렌드 RSS에서 상위 n개 키워드를 가져옵니다."""
-    resp = requests.get(TRENDS_RSS_URL, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-    resp.raise_for_status()
+    """구글 트렌드 RSS에서 상위 n개 키워드를 가져옵니다. 여러 주소를 순서대로 시도합니다."""
+    last_error = None
+    for url in TRENDS_RSS_URLS:
+        try:
+            resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+            root = ET.fromstring(resp.content)
+            titles = [item.findtext("title") for item in root.iter("item")]
+            titles = [t.strip() for t in titles if t and t.strip()]
+            if titles:
+                print(f"  → 사용된 주소: {url}")
+                return titles[:n]
+            last_error = f"{url} 응답은 성공했지만 키워드가 비어있음"
+        except Exception as e:
+            last_error = f"{url} 실패: {e}"
+            print(f"  → {last_error}")
 
-    root = ET.fromstring(resp.content)
-    titles = [item.findtext("title") for item in root.iter("item")]
-    titles = [t.strip() for t in titles if t and t.strip()]
-
-    return titles[:n]
+    raise RuntimeError(f"모든 트렌드 주소에서 가져오기 실패. 마지막 오류: {last_error}")
 
 
 def load_queue() -> dict:
@@ -54,16 +68,7 @@ def save_queue(queue: dict) -> None:
 
 def run():
     print("[구글 트렌드] 대한민국 일일 인기 검색어 가져오는 중...")
-    try:
-        trends = fetch_top_trends()
-    except Exception as e:
-        print(f"[오류] 트렌드 조회 실패: {e}")
-        print("네트워크 문제이거나 구글 쪽 피드 형식이 바뀌었을 수 있습니다. 이번 실행은 건너뜁니다.")
-        return
-
-    if not trends:
-        print("[안내] 가져온 키워드가 없습니다 (피드 응답이 비어있음). 건너뜁니다.")
-        return
+    trends = fetch_top_trends()  # 실패하면 예외가 발생해 Actions에서 빨간 X로 명확히 표시됨
 
     print(f"[구글 트렌드] 상위 {len(trends)}개: {trends}")
 
@@ -81,4 +86,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except Exception as e:
+        print(f"[오류] {e}")
+        raise SystemExit(1)
