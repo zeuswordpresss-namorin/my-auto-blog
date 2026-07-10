@@ -219,6 +219,22 @@ def get_theme(category: str) -> dict:
     return CATEGORY_THEMES.get(category, DEFAULT_THEME)
 
 
+# 카테고리별 무료 일러스트 생성 프롬프트 (Pollinations.ai - 무료, API 키 불필요)
+ILLUSTRATION_PROMPTS = {
+    "뷰티패션": "flat vector illustration of cosmetics lipstick and fashion clothing items, minimal pastel style",
+    "푸드맛집": "flat vector illustration of food dishes and cafe coffee items, minimal pastel style",
+    "여행": "flat vector illustration of travel landscape airplane suitcase palm tree, minimal pastel style",
+    "테크IT": "flat vector illustration of laptop computer and technology icons, minimal modern style",
+    "재테크머니": "flat vector illustration of coins money and finance growth chart, minimal pastel style",
+    "헬스운동": "flat vector illustration of fitness workout dumbbell and healthy food, minimal pastel style",
+    "홈인테리어": "flat vector illustration of cozy home interior furniture and plants, minimal pastel style",
+    "대출보험": "flat vector illustration of bank building document and contract, minimal professional style",
+    "정부지원금": "flat vector illustration of government building document and checklist, minimal clean style",
+    "라이프스타일": "flat vector illustration of coffee book and cozy lifestyle items, minimal pastel style",
+}
+ILLUSTRATION_SUFFIX = ", simple shapes, no text, no watermark, white background, isolated icons"
+
+
 def build_decor_html(theme: dict, seed: str) -> str:
     """글 주제에 맞는 아기자기한 이모지 일러스트를 배경 빈 공간에 랜덤 배치합니다.
     seed(글 slug)로 고정해서 같은 글은 새로고침해도 항상 같은 배치가 나옵니다."""
@@ -679,8 +695,36 @@ def _hex_to_rgb(hex_color: str):
     return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def generate_thumbnail(title: str, output_path: str, theme: dict) -> None:
+def _fetch_illustration(category: str, size: tuple, seed: int):
+    """Pollinations.ai(무료, 키 불필요)에서 카테고리에 맞는 일러스트를 받아옵니다.
+    네트워크 실패/타임아웃 등 어떤 이유로든 실패하면 None을 반환하고,
+    호출부에서는 그냥 일러스트 없이(그라데이션만으로) 계속 진행합니다."""
+    prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"]) + ILLUSTRATION_SUFFIX
+    url = (
+        f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
+        f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
+    )
+    try:
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+        if img.size != size:
+            img = img.resize(size)
+        return img
+    except Exception as e:
+        print(f"  → [일러스트] 생성 실패, 그라데이션만 사용: {e}")
+        return None
+
+
+def generate_thumbnail(title: str, output_path: str, theme: dict, category: str = "라이프스타일") -> None:
     img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
+
+    # --- 주제 관련 무료 일러스트를 반투명 배경으로 합성 ---
+    seed = int(hashlib.md5(title.encode("utf-8")).hexdigest(), 16) % 100000
+    illustration = _fetch_illustration(category, THUMB_SIZE, seed)
+    if illustration is not None:
+        img = Image.blend(img, illustration, alpha=0.38)
+
     draw = ImageDraw.Draw(img)
     accent_rgb = _hex_to_rgb(theme["accent"])
 
@@ -838,11 +882,26 @@ def add_ymyl_disclaimer(article: dict) -> dict:
     return article
 
 
+def _relevance_score(article: dict, candidate: dict) -> float:
+    """현재 글과 후보 글의 주제 관련도를 점수화합니다.
+    - 같은 카테고리면 기본 점수 +3
+    - 제목/키워드에 겹치는 단어가 많을수록 가산점"""
+    score = 0.0
+    if candidate.get("category") == article.get("category", "라이프스타일"):
+        score += 3.0
+
+    current_words = set(re.findall(r"[\w가-힣]+", (article.get("title", "") + " " + article.get("keyword", ""))))
+    candidate_words = set(re.findall(r"[\w가-힣]+", candidate.get("title", "")))
+    overlap = len(current_words & candidate_words)
+    score += overlap * 1.5
+
+    return score
+
+
 def add_internal_link(article: dict) -> dict:
-    """내부링크를 2곳에 삽입해 순환을 강화합니다 (체류시간/페이지뷰 증가):
-    1) 도입부 바로 아래 - 같은 카테고리의 이전 글
-    2) 본문 끝 - 카테고리 무관 전체 최신글 (같은 카테고리 글과 중복되지 않게)"""
-    category = article.get("category", "라이프스타일")
+    """본문 끝에 내부링크를 1곳 삽입합니다 (도입부 삽입은 제거).
+    단순 '최신글'이 아니라 카테고리 일치 + 제목 단어 겹침으로 관련도를 점수화하고,
+    상위 관련 후보 중에서 가중 랜덤으로 골라 매번 다른 글이 걸리도록(유니크하게) 합니다."""
     if not os.path.exists(POSTS_JSON):
         return article
     with open(POSTS_JSON, "r", encoding="utf-8") as f:
@@ -850,24 +909,21 @@ def add_internal_link(article: dict) -> dict:
     if not posts:
         return article
 
-    same_category = [p for p in posts if p.get("category") == category]
+    scored = [(p, _relevance_score(article, p)) for p in posts]
+    scored.sort(key=lambda x: x[1], reverse=True)
 
-    if same_category:
-        pick = same_category[0]
-        link_html = f'<p>📌 관련해서 <a href="../{pick["file"]}">{pick["title"]}</a>도 함께 참고해보세요.</p>'
-        idx = article["html_body"].find("</p>")
-        if idx != -1:
-            insert_at = idx + len("</p>")
-            article["html_body"] = article["html_body"][:insert_at] + link_html + article["html_body"][insert_at:]
-        else:
-            article["html_body"] = link_html + article["html_body"]
+    top_pool = [p for p, s in scored[:5] if s > 0] or [p for p, s in scored[:5]]
+    if not top_pool:
+        return article
 
-    others = [p for p in posts if p.get("file") != (same_category[0]["file"] if same_category else None)]
-    if others:
-        pick2 = others[0]
-        link2_html = f'<p>🔗 이 글도 많이 찾아보세요: <a href="../{pick2["file"]}">{pick2["title"]}</a></p>'
-        article["html_body"] += link2_html
+    weights = [max(s, 0.5) for p, s in scored[:len(top_pool)]]
+    pick = random.choices(top_pool, weights=weights, k=1)[0]
 
+    link_html = (
+        f'<p style="margin-top:2em;padding-top:1em;border-top:1px dashed #ddd;">'
+        f'🔗 이 글도 함께 보면 좋아요: <a href="../{pick["file"]}">{pick["title"]}</a></p>'
+    )
+    article["html_body"] += link_html
     return article
 
 
@@ -953,7 +1009,7 @@ def save_post(article: dict):
     thumb_filename = f"{slug}-{today}.webp"
     post_filename = f"{slug}-{today}.html"
 
-    generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme)
+    generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme, category)
 
     post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
     thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
@@ -1300,4 +1356,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
-
