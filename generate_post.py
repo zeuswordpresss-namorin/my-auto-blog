@@ -1081,6 +1081,21 @@ def _get_blogger_access_token() -> str:
     return resp.json()["access_token"]
 
 
+def _make_blogger_safe_html(html_body: str) -> str:
+    """html_body 안에는 GitHub Pages 폴더 구조 기준 상대경로 링크(../posts/, ../thumbs/)가
+    섞여 있을 수 있습니다 (같은 카테고리 이전 글로의 내부링크 등). 이 상대경로는 블로거에는
+    존재하지 않는 주소라 그대로 두면 '페이지를 찾을 수 없습니다' 오류가 납니다.
+    SITE_URL이 설정되어 있으면 절대경로로 바꾸고, 없으면 깨진 링크를 만들지 않도록 태그만 제거합니다."""
+    if SITE_URL:
+        html_body = html_body.replace('href="../posts/', f'href="{SITE_URL}/posts/')
+        html_body = html_body.replace('href="../thumbs/', f'href="{SITE_URL}/thumbs/')
+        html_body = html_body.replace('src="../thumbs/', f'src="{SITE_URL}/thumbs/')
+    else:
+        # SITE_URL이 없으면 절대경로를 만들 수 없으니, 깨진 링크 대신 일반 텍스트로 되돌립니다.
+        html_body = re.sub(r'<a href="\.\./(posts|thumbs)/[^"]*"[^>]*>(.*?)</a>', r"\2", html_body)
+    return html_body
+
+
 def publish_to_blogger(article: dict, json_ld: str, thumb_url: str, local_thumb_path: str) -> None:
     """같은 글을 구글 블로거에도 발행합니다. 미설정/실패해도 전체 파이프라인은 계속 진행됩니다."""
     if not _blogger_configured():
@@ -1106,7 +1121,7 @@ def publish_to_blogger(article: dict, json_ld: str, thumb_url: str, local_thumb_
             f'<img src="{img_src}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
             f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
             f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
-            f'{article["html_body"]}'
+            f'{_make_blogger_safe_html(article["html_body"])}'
             f'<script type="application/ld+json">{json_ld}</script>'
         )
 
