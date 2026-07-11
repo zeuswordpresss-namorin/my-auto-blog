@@ -96,7 +96,9 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
    일반화해서 쓰고, 절대 구체적 숫자를 추측해서 채우지 않는다.
 4. 글자 수는 1500~2200자 내외.
 5. 두괄식으로 쓴다: 첫 문단(도입부)에서 이 글이 다루는 핵심 답/결론을 먼저 요약 제시하고, 이후 문단에서 자세히 설명한다.
-6. 가독성을 위해 본문 중 최소 1곳에 <table> (비교/정리표) 또는 <ul>/<ol> 목록을 반드시 포함한다.
+6. 가독성을 위해 본문 중 최소 1곳에 <table> (수치/스펙 비교용 정리표) 또는 <ul>/<ol> 목록을 반드시 포함한다.
+   단, 질문-답변(Q&A) 내용은 절대 <table>로 만들지 않는다 (표 형태는 모바일에서 깨지기 쉬움).
+   FAQPage 타입을 고른 경우, 본문에는 Q&A를 별도로 나열하지 않는다 (faq_items로 충분하며, 화면에는 별도 섹션으로 자동 표시됨).
 7. 자연스러운 위치에 제품/서비스 추천 문맥을 1곳 만든다 (실제 링크는 넣지 않음, 나중에 자동 삽입됨).
 8. 콘텐츠 내용을 보고 아래 3가지 중 구글 상위노출에 가장 유리한 스키마 타입을 스스로 판단해서 고른다:
    - "FAQPage": 자주 묻는 질문/답변 형태로 정리하기 좋은 주제일 때 (예: "~란?", "~ 방법", "~ 차이" 등 질의응답형 검색의도)
@@ -280,14 +282,21 @@ ENABLE_AUTO_TRANSLATE = os.environ.get("ENABLE_AUTO_TRANSLATE", "true").strip().
 
 def _translate_widget() -> str:
     """구글 번역 위젯(무료, API 키 불필요)을 삽입합니다.
-    방문자의 브라우저 언어가 한국어가 아니면 구글이 자동으로 번역 배너를 보여줍니다."""
+    첫 화면에는 작은 지구본 아이콘만 보이고, 탭하면 그때 번역 선택창이 펼쳐집니다
+    (구글이 기본으로 보여주는 큰 배너는 autoDisplay:false로 꺼둠)."""
     if not ENABLE_AUTO_TRANSLATE:
         return ""
     return """
-<div id="google_translate_element" class="translate-widget"></div>
+<div style="position:fixed;top:10px;right:10px;z-index:999;">
+  <button onclick="var e=document.getElementById('gt-box');e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none';"
+    style="width:38px;height:38px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:17px;cursor:pointer;line-height:1;">🌐</button>
+  <div id="gt-box" style="display:none;margin-top:6px;background:#fff;padding:6px 8px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.18);">
+    <div id="google_translate_element"></div>
+  </div>
+</div>
 <script>
 function googleTranslateElementInit() {
-  new google.translate.TranslateElement({pageLanguage: 'ko', autoDisplay: true}, 'google_translate_element');
+  new google.translate.TranslateElement({pageLanguage: 'ko', autoDisplay: false}, 'google_translate_element');
 }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>"""
@@ -302,6 +311,32 @@ def _adsense_snippet() -> str:
     return (
         f'\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
         f'?client={ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>'
+    )
+
+
+def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
+    """FAQPage 타입일 때, AI의 자유 서식(표 등)에 의존하지 않고 구조화된 faq_items 데이터로
+    질문/답변을 명확히 구분된 카드 형태로 직접 렌더링합니다.
+    전부 인라인 스타일(style="...")을 사용해서, <style> 태그가 제거되는 환경(예: 일부 블로거 테마)
+    에서도 레이아웃이 깨지지 않습니다."""
+    if article.get("schema_type") != "FAQPage" or not article.get("faq_items"):
+        return ""
+
+    cards = []
+    for i, qa in enumerate(article["faq_items"], 1):
+        question = qa.get("question", "")
+        answer = qa.get("answer", "")
+        cards.append(
+            '<div style="margin:16px 0;padding:16px 18px;background:#f7f8fa;'
+            f'border-left:4px solid {accent};border-radius:8px;">'
+            f'<p style="margin:0 0 8px;font-weight:700;color:#111;">Q{i}. {question}</p>'
+            f'<p style="margin:0;color:#444;line-height:1.7;">A. {answer}</p>'
+            '</div>'
+        )
+
+    return (
+        '<h2 style="margin-top:2em;">자주 묻는 질문</h2>'
+        + "".join(cards)
     )
 
 
@@ -801,15 +836,37 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     bar_h = 18
     draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
 
-    # --- 제목 텍스트 ---
-    font = _load_font(72)
-    lines = textwrap.wrap(title, width=14)[:3]
+    # --- 제목 텍스트 (길이에 따라 폰트 크기를 자동으로 줄여서 넘치지 않게 함) ---
+    max_text_width = THUMB_SIZE[0] - 120  # 좌우 여백 확보
+    max_text_height = THUMB_SIZE[1] - 260  # 상단 배지/하단 바 영역 제외
 
-    heights = []
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=font)
-        heights.append(bbox[3] - bbox[1])
-    total_h = sum(heights) + (len(lines) - 1) * 20
+    font_size = 72
+    while font_size > 30:
+        font = _load_font(font_size)
+        # 폰트 크기에 맞춰 한 줄에 들어갈 글자 수를 다시 추정해서 줄바꿈
+        avg_char_w = font.getbbox("가")[2] or (font_size * 0.9)
+        wrap_width = max(4, int(max_text_width / avg_char_w))
+        lines = textwrap.wrap(title, width=wrap_width)[:3]
+
+        line_widths = [draw.textbbox((0, 0), line, font=font)[2] for line in lines]
+        heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
+        total_h = sum(heights) + (len(lines) - 1) * 20
+
+        if max(line_widths, default=0) <= max_text_width and total_h <= max_text_height:
+            break
+        font_size -= 4
+    else:
+        font = _load_font(30)
+        avg_char_w = font.getbbox("가")[2] or (30 * 0.9)
+        wrap_width = max(4, int(max_text_width / avg_char_w))
+        lines = textwrap.wrap(title, width=wrap_width)[:3]
+        heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
+        total_h = sum(heights) + (len(lines) - 1) * 20
+
+    # 그래도 3줄을 넘는 긴 제목은 말줄임표 처리
+    if len(textwrap.wrap(title, width=wrap_width)) > 3:
+        lines[-1] = lines[-1].rstrip(".,!? ") + "..."
+
     y = (THUMB_SIZE[1] - total_h) / 2 + 20
 
     for line, lh in zip(lines, heights):
@@ -1085,6 +1142,10 @@ def save_post(article: dict):
     post_filename = f"{slug}-{today}.html"
 
     generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme, category)
+
+    # FAQ 섹션을 구조화된 데이터로 직접 렌더링해서 html_body에 병합
+    # (article 딕셔너리를 직접 수정하므로, 이후 블로거 발행 시에도 동일하게 반영됨)
+    article["html_body"] += build_faq_section_html(article, theme["accent"])
 
     post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
     thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
@@ -1374,6 +1435,7 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
             img_src = thumb_url
 
         content_html = (
+            f'{_translate_widget()}'
             f'<img src="{img_src}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
             f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
             f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
@@ -1435,3 +1497,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
+
