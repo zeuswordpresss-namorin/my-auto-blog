@@ -1498,3 +1498,107 @@ if __name__ == "__main__":
         print(f"[오류] {e}")
         sys.exit(1)
 
+# 기존 코드 아래에 이어서 작성하거나 전체를 교체하세요.
+
+def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_thumb_path: str) -> None:
+    """같은 글을 구글 블로거에도 발행합니다. 미설정/실패해도 전체 파이프라인은 계속 진행됩니다."""
+    if not _blogger_configured():
+        print("  → [Blogger] 블로거 설정(Secrets)이 완전하지 않아 동시 발행을 건너뜁니다.")
+        return
+
+    print("  → [Blogger] 구글 블로거 동시 발행을 시작합니다...")
+    try:
+        # 1. 액세스 토큰 갱신
+        access_token = _get_blogger_access_token()
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        # 2. 블로거 환경에 맞는 HTML 정제 및 상단 썸네일 추가
+        safe_body = _make_blogger_safe_html(article["html_body"])
+        
+        # 블로거 본문 맨 위에 대표 썸네일 이미지를 명시적으로 삽입 (검색 노출 및 가독성 확보)
+        # 외부에서 접근 가능한 썸네일 주소가 있으면 사용하고, 없으면 본문만 발행합니다.
+        blogger_thumb_url = thumb_url if SITE_URL else ""
+        if blogger_thumb_url:
+            img_html = f'<div style="text-align:center; margin-bottom:20px;"><img src="{blogger_thumb_url}" alt="{article["title"]}" style="max-width:100%; height:auto; border-radius:12px;"></div>'
+            content_html = img_html + safe_body
+        else:
+            content_html = safe_body
+
+        # 3. 블로거 API 발행 데이터 구성
+        # 블로거 게시글 하단에도 검색최적화 구조화 데이터(JSON-LD)를 함께 삽입합니다.
+        today = datetime.now().strftime("%Y-%m-%d")
+        json_ld_blogger = build_json_ld(article, canonical_url, blogger_thumb_url, today, platform="blogger")
+        content_html += f'\n<script type="application/ld+json">\n{json_ld_blogger}\n</script>'
+
+        payload = {
+            "kind": "blogger#post",
+            "blog": {"id": BLOGGER_BLOG_ID},
+            "title": article["title"],
+            "content": content_html,
+            "labels": [article.get("category", "라이프스타일")]
+        }
+
+        # 4. 포스트 요청 전송
+        url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOGGER_BLOG_ID}/posts/"
+        resp = requests.post(url, headers=headers, json=payload, timeout=20)
+        resp.raise_for_status()
+        
+        blogger_data = resp.json()
+        print(f"  → [Blogger] 발행 성공! (URL: {blogger_data.get('url')})")
+
+    except Exception as e:
+        print(f"  → [Blogger] 발행 중 에러 발생 (건너뜀): {e}")
+
+
+# =====================================================================
+# 메인 실행 파이프라인 파트
+# =====================================================================
+if __name__ == "__main__":
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 자동 블로그 파이프라인 v4 가동")
+    
+    try:
+        # 1. 키워드 가져오기
+        target_keyword = get_title_from_args_or_queue()
+        print(f"🎯 작업 키워드 선정: {target_keyword}")
+
+        # 2. 필수 고정 브랜드 자산(로고/배너/파비콘) 점검 및 생성
+        ensure_brand_assets()
+
+        # 3. Gemini 기반 글 생성
+        print("🤖 Gemini API를 통해 SEO 최적화 글을 생성하는 중...")
+        generated_data = generate_article(target_keyword)
+        print(f"  → 생성된 제목: {generated_data['title']}")
+        print(f"  → 분류 카테고리: {generated_data.get('category', '라이프스타일')}")
+
+        # 4. 수익화 및 컴플라이언스 요소 결합 (쿠팡 파트너스, 수동 광고, YMYL 경고)
+        generated_data = add_ymyl_disclaimer(generated_data)
+        generated_data = insert_manual_ads(generated_data)
+        generated_data = add_coupang_markup(generated_data)
+        generated_data = add_internal_link(generated_data)
+
+        # 5. 필수 정적 페이지(About, Privacy, Contact) 자동 준비
+        generate_static_pages()
+
+        # 6. 정적 포스트 저장 및 이미지 빌드
+        print("💾 로컬 HTML 포스트 및 썸네일 이미지 파일 생성 중...")
+        post_meta, json_ld, full_thumb_url, local_thumb, full_post_url = save_post(generated_data)
+
+        # 7. 인덱스(메인 페이지) 갱신 및 전체 글 대시보드 업데이트
+        print("🔄 메인 페이지(index.html) 및 대시보드 동적 갱신 중...")
+        all_posts = update_index(post_meta)
+        update_dashboard(all_posts)
+
+        # 8. 검색 로봇용 자산(Sitemap, Robots) 최신화
+        update_seo_files(all_posts)
+
+        # 9. 구글 블로거에 동시 배포 실행
+        publish_to_blogger(generated_data, full_post_url, full_thumb_url, local_thumb)
+
+        print(f"🎉 모든 파이프라인 처리가 성공적으로 완료되었습니다! 프로젝트 저장소를 푸시하세요.")
+
+    except Exception as error:
+        print(f"❌ 파이프라인 실행 실패: {error}")
+        sys.exit(1)
