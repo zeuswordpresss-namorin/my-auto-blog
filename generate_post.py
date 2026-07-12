@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v5.2 - 마크다운 코드블록 및 제어문자 예외 처리 강화판)
+GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.1 - 버그 수정 및 안정화 버전)
 """
 
 import base64
@@ -12,7 +12,6 @@ import os
 import random
 import re
 import sys
-import textwrap
 import time
 import urllib.parse
 from datetime import datetime
@@ -21,22 +20,21 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 
 # =====================================================================
-# 환경변수로 받는 설정값 (GitHub 저장소 Secrets / Variables에서 자동 주입됨)
+# 환경변수로 받는 설정값
 # =====================================================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SITE_TITLE = os.environ.get("SITE_TITLE", "내 자동 블로그")
 SITE_TAGLINE = os.environ.get("SITE_TAGLINE", "매일 자동으로 업데이트되는 정보 큐레이션 블로그")
-SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")  # 예: [https://아이디.github.io/my-auto-blog](https://아이디.github.io/my-auto-blog)
-GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "")  # 예: G-XXXXXXXXXX
-GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION", "")  # 서치콘솔 HTML 태그 인증용 코드
-ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")  # 예: ca-pub-1234567890123456
-ADSENSE_SLOT_ID = os.environ.get("ADSENSE_SLOT_ID", "")  # 애드센스에서 만든 "디스플레이 광고" 단위 ID (수동 배치용)
+SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")
+GA_MEASUREMENT_ID = os.environ.get("GA_MEASUREMENT_ID", "")
+GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION", "")
+ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")
+ADSENSE_SLOT_ID = os.environ.get("ADSENSE_SLOT_ID", "")
 
 COUPANG_PARTNER_TAG = os.environ.get("COUPANG_PARTNER_TAG", "")
 COUPANG_ACCESS_KEY = os.environ.get("COUPANG_ACCESS_KEY", "")
 COUPANG_SECRET_KEY = os.environ.get("COUPANG_SECRET_KEY", "")
 
-# 구글 블로거 동시발행용
 BLOGGER_BLOG_ID = os.environ.get("BLOGGER_BLOG_ID", "")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
@@ -53,7 +51,7 @@ POSTS_JSON = os.path.join(DOCS_DIR, "posts.json")
 QUEUE_FILE = "keywords_queue.json"
 
 GEMINI_URL = (
-    "[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)"
+    "https://generativelanguage.googleapis.com/v1beta/models/"
     "gemini-2.5-flash:generateContent?key={api_key}"
 )
 
@@ -233,7 +231,7 @@ def _ga_snippet() -> str:
     if not GA_MEASUREMENT_ID:
         return ""
     return f"""
-<script async src="https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}"></script>
+<script async src="[https://www.googletagmanager.com/gtag/js?id=](https://www.googletagmanager.com/gtag/js?id=){GA_MEASUREMENT_ID}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){{dataLayer.push(arguments);}}
@@ -259,13 +257,13 @@ function googleTranslateElementInit() {
   new google.translate.TranslateElement({pageLanguage: 'ko', autoDisplay: false}, 'google_translate_element');
 }
 </script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>"""
+<script src="//[translate.google.com/translate_a/element.js?cb=googleTranslateElementInit](https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit)"></script>"""
 
 def _adsense_snippet() -> str:
     if not ADSENSE_CLIENT_ID:
         return ""
     return (
-        f'\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
+        f'\n<script async src="[https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js](https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js)'
         f'?client={ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>'
     )
 
@@ -301,7 +299,7 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
 
     if schema_type == "FAQPage" and article.get("faq_items"):
         data = {
-            "@context": "https://schema.org",
+            "@context": "[https://schema.org](https://schema.org)",
             "@type": "FAQPage",
             "mainEntity": [
                 {
@@ -314,7 +312,7 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
         }
     elif schema_type == "HowTo" and article.get("howto_steps"):
         data = {
-            "@context": "https://schema.org",
+            "@context": "[https://schema.org](https://schema.org)",
             "@type": "HowTo",
             "name": title,
             "description": meta_description,
@@ -326,7 +324,7 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
     else:
         schema_type = article_type
         data = {
-            "@context": "https://schema.org",
+            "@context": "[https://schema.org](https://schema.org)",
             "@type": article_type,
             "headline": title,
             "description": meta_description,
@@ -344,14 +342,14 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
             {"@type": "ListItem", "position": 3, "name": title, "item": canonical_url},
         ],
     }
-    graph_data = {"@context": "https://schema.org", "@graph": [data, breadcrumb]}
+    graph_data = {"@context": "[https://schema.org](https://schema.org)", "@graph": [data, breadcrumb]}
 
     print(f"  → [스키마 마크업] AI가 선택한 타입: {schema_type} (+ BreadcrumbList)")
     return json.dumps(graph_data, ensure_ascii=False, indent=2)
 
 def build_blog_index_json_ld(posts: list) -> str:
     data = {
-        "@context": "https://schema.org",
+        "@context": "[https://schema.org](https://schema.org)",
         "@type": "Blog",
         "name": SITE_TITLE,
         "url": (SITE_URL + "/") if SITE_URL else ".",
@@ -386,8 +384,8 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{meta_description}">
 <meta name="twitter:image" content="{thumb_url}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family={font}&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+<link href="[https://fonts.googleapis.com/css2?family=](https://fonts.googleapis.com/css2?family=){font}&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">
 {json_ld}
 </script>{ga_snippet}{adsense_snippet}
@@ -405,9 +403,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
   h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.4em, 5vw, 1.9em); line-height: 1.35; margin: 0 0 8px; word-break: keep-all; }}
   h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }}
   p {{ margin: 1em 0; position: relative; z-index: 1; }}
-  table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; margin: 1.5em 0; }}
-  th, td {{ border: 1px solid #ddd; padding: 10px 14px; text-align: left; }}
-  th {{ background-color: #f9f9f9; font-weight: 700; }}
+  table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; }}
   a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }}
   .meta {{ color: #999; font-size: 0.85em; margin-bottom: 4px; }}
   .related {{ margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }}
@@ -455,7 +451,7 @@ ALL_THEME_FONTS = sorted({t["font"] for t in CATEGORY_THEMES.values()})
 
 def _google_fonts_url() -> str:
     families = "&family=".join(ALL_THEME_FONTS)
-    return f"https://fonts.googleapis.com/css2?family={families}&family=Noto+Sans+KR:wght@400;700;900&display=swap"
+    return f"[https://fonts.googleapis.com/css2?family=](https://fonts.googleapis.com/css2?family=){families}&family=Noto+Sans+KR:wght@400;700;900&display=swap"
 
 INDEX_TEMPLATE = """<!DOCTYPE html>
 <html lang="ko">
@@ -466,7 +462,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="{site_url}/">
 <link rel="icon" type="image/png" href="favicon.png">{search_console_meta}
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
 <link href="{fonts_url}" rel="stylesheet">
 <script type="application/ld+json">
 {blog_json_ld}
@@ -489,27 +485,32 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   .content-wrap {{ padding: 0 clamp(14px, 4vw, 20px); }}
   .tier-label {{ font-size: 0.85em; font-weight:900; color:#aaa; letter-spacing:2px; margin: 34px 0 12px; text-transform:uppercase; }}
   .tier-label:first-of-type {{ margin-top: 10px; }}
+
   .hero {{ display:block; text-decoration:none; color:#1a1a1a; background:#fff; border-radius:20px; overflow:hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.10); }}
   .hero img {{ width:100%; aspect-ratio: 21/9; object-fit:cover; display:block; }}
   .hero-body {{ padding: clamp(16px, 4vw, 22px) clamp(18px, 5vw, 26px) 28px; }}
   .hero-badge {{ display:inline-block; font-size:0.8em; font-weight:700; color:#fff; padding:5px 14px; border-radius:999px; margin-bottom:12px; }}
   .hero-title {{ font-size: clamp(1.25em, 4.5vw, 1.7em); font-weight:800; line-height:1.35; word-break: keep-all; }}
+
   .mid-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:18px; }}
   .mid-card {{ text-decoration:none; color:#1a1a1a; background:#fff; border-radius:16px; overflow:hidden; box-shadow: 0 3px 14px rgba(0,0,0,0.08); transition: transform .15s ease; }}
   .mid-card:hover {{ transform: translateY(-3px); }}
   .mid-card img {{ width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }}
   .mid-body {{ padding: 14px 16px 18px; }}
   .mid-title {{ font-weight:700; font-size:clamp(0.92em, 3vw, 1.08em); line-height:1.4; word-break: keep-all; }}
+
   .bottom-grid {{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:14px; }}
   .bottom-card {{ text-decoration:none; color:#1a1a1a; background:#fff; border-radius:10px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
   .bottom-card img {{ width:100%; aspect-ratio:16/10; object-fit:cover; display:block; }}
   .bottom-body {{ padding: 8px 10px 12px; }}
   .bottom-title {{ font-weight:600; font-size:0.85em; line-height:1.35; word-break: keep-all; }}
+
   .badge-sm {{ display:inline-block; font-size:0.65em; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:5px; }}
   .date {{ color: #999; font-size: 0.78em; margin-top: 5px; }}
   .site-footer {{ margin-top: 50px; padding: 24px 20px; border-top: 1px solid #e2e2e2; text-align:center; color:#999; font-size:0.82em; }}
   .site-footer a {{ color:#777; text-decoration:none; margin: 0 8px; }}
   .site-footer a:hover {{ color:#b45309; }}
+
   @media (max-width: 480px) {{
     .masthead img {{ aspect-ratio: 1600/620; }}
     .hero img {{ aspect-ratio: 16/9; }}
@@ -538,6 +539,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   <p class="intro">{site_tagline}</p>
   <div class="pill-row">{category_pills}</div>
 </div>
+
 <div class="content-wrap">
 {hero_html}
 {mid_html}
@@ -568,26 +570,31 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 <body>
 <a class="back" href="index.html">← 블로그로</a>
 <h1>📊 성과 관리 대시보드</h1>
+
 <div class="card">
   <b>실시간 트래픽 확인 (GA4)</b><br>
   플레이스토어 "Google Analytics" 앱 설치 후 이 사이트의 방문자/인기글을 확인하세요.<br>
-  <a href="https://analytics.google.com" target="_blank">analytics.google.com 바로가기</a>
+  <a href="[https://analytics.google.com](https://analytics.google.com)" target="_blank">analytics.google.com 바로가기</a>
 </div>
+
 <div class="card">
   <b>수익(쿠팡 마크업 수수료) 확인</b><br>
   쿠팡파트너스 앱 또는 사이트에서 클릭수/수익을 확인하세요.<br>
-  <a href="https://partners.coupang.com" target="_blank">partners.coupang.com 바로가기</a>
+  <a href="[https://partners.coupang.com](https://partners.coupang.com)" target="_blank">partners.coupang.com 바로가기</a>
 </div>
+
 <div class="card">
   <b>광고 수익(애드센스) 확인</b><br>
   플레이스토어 "Google AdSense" 앱 설치 후 페이지뷰/광고 수익(전면광고 포함)을 확인하세요.<br>
-  <a href="https://www.google.com/adsense" target="_blank">adsense.google.com 바로가기</a>
+  <a href="[https://www.google.com/adsense](https://www.google.com/adsense)" target="_blank">adsense.google.com 바로가기</a>
 </div>
+
 <div class="card">
   <b>검색 노출 확인 (Google Search Console)</b><br>
   사이트가 구글 검색에 얼마나 노출/클릭되는지 확인하세요. 최초 1회 소유권 인증이 필요합니다.<br>
-  <a href="https://search.google.com/search-console" target="_blank">search.google.com/search-console 바로가기</a>
+  <a href="[https://search.google.com/search-console](https://search.google.com/search-console)" target="_blank">[search.google.com/search-console](https://search.google.com/search-console) 바로가기</a>
 </div>
+
 <h2>발행된 글 목록 ({post_count}개)</h2>
 <table>
 <tr><th>날짜</th><th>제목</th><th>바로가기</th></tr>
@@ -598,7 +605,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 """
 
 SITEMAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="[http://www.sitemaps.org/schemas/sitemap/0.9](http://www.sitemaps.org/schemas/sitemap/0.9)">
 <url><loc>{site_url}/</loc></url>
 {url_entries}
 </urlset>
@@ -610,6 +617,7 @@ Allow: /
 Sitemap: {site_url}/sitemap.xml
 """
 
+GEMINI_GRADIENT_COLORS = [(66, 133, 244), (156, 39, 176), (234, 67, 121)]
 THUMB_SIZE = (1280, 720)
 
 def slugify(text: str) -> str:
@@ -639,13 +647,780 @@ def get_title_from_args_or_queue() -> str:
 
     return title
 
-def extract_pure_json(text: str) -> str:
-    """Gemini가 반환한 텍스트에서 불필요한 마크다운 코드 블록 기호(```json)를 정밀 전처리한 뒤,
-    유효한 최외각 JSON object 문자열과 깨진 제어문자를 파싱 및 치환합니다."""
-    text_clean = text.strip()
-    
-    # 1단계: 빈번하게 유입되는 앞뒤 마크다운 블록 기호 정규식 제거
-    text_clean = re.sub(r"^```json\s*", "", text_clean, flags=re.IGNORECASE)
-    text_clean = re.sub(r"^```\s*", "", text_clean)
-    text_clean = re.sub(r"\s*
+def generate_article(title: str) -> dict:
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY 환경변수가 비어있습니다. 저장소 Secrets 설정을 확인하세요.")
 
+    url = GEMINI_URL.format(api_key=GEMINI_API_KEY)
+    payload = {
+        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "contents": [{"role": "user", "parts": [{"text": f"제목: '{title}' 에 대한 블로그 글을 작성해주세요."}]}],
+    }
+
+    last_error = None
+    for attempt in range(1, 4):
+        try:
+            resp = requests.post(url, json=payload, timeout=60)
+            if resp.status_code in (429, 503):
+                wait = 15 * attempt
+                print(f"  → 일시적 오류({resp.status_code}), {wait}초 대기 후 재시도 ({attempt}/3)")
+                time.sleep(wait)
+                last_error = f"{resp.status_code} 오류 반복됨"
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # [버그 수정]: JSON 마크다운 기호 제거 후 정규식으로 순수 { } 객체만 정밀 검출
+            cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+            if match:
+                cleaned = match.group(0)
+                
+            decoder = json.JSONDecoder()
+            article, _ = decoder.raw_decode(cleaned)
+            article["keyword"] = title
+
+            desc = article.get("meta_description", "").strip()
+            if len(desc) > 160:
+                desc = desc[:157].rstrip() + "..."
+            article["meta_description"] = desc
+
+            return article
+        except (KeyError, IndexError) as e:
+            raise ValueError(f"Gemini 응답 형식이 예상과 다릅니다: {e}")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"AI 응답을 JSON으로 해석하지 못했습니다: {e}")
+        except requests.exceptions.RequestException as e:
+            last_error = str(e)
+            time.sleep(10)
+
+    raise RuntimeError(f"3번 시도했지만 계속 실패했습니다: {last_error}")
+
+def _load_font(size):
+    for path in FONT_CANDIDATES:
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    print("[안내] 한글 폰트를 찾지 못해 기본 폰트로 대체합니다 (한글이 깨져 보일 수 있음).")
+    return ImageFont.load_default()
+
+def _make_gradient_background(size, colors):
+    w, h = size
+    base = Image.new("RGB", size, colors[0])
+    top = Image.new("RGB", size, colors[-1])
+    mask = Image.new("L", size)
+    mask.putdata([int(((x / w + y / h) / 2) * 255) for y in range(h) for x in range(w)])
+    blended = Image.composite(top, base, mask)
+
+    mid = Image.new("RGB", size, colors[1])
+    mid_mask = Image.new("L", size)
+    mid_mask.putdata([int(80 * (1 - abs((x / w + y / h) / 2 - 0.5) * 2)) for y in range(h) for x in range(w)])
+    return Image.composite(mid, blended, mid_mask)
+
+def _hex_to_rgb(hex_color: str):
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+
+def _fetch_illustration(category: str, size: tuple, seed: int):
+    prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"]) + ILLUSTRATION_SUFFIX
+    url = (
+        f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
+        f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
+    )
+    try:
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+        if img.size != size:
+            img = img.resize(size)
+        return img
+    except Exception as e:
+        print(f"  → [일러스트] 생성 실패, 그라데이션만 사용: {e}")
+        return None
+
+def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
+    words = text.split(" ")
+    lines = []
+    current = ""
+
+    def width_of(s):
+        bbox = draw.textbbox((0, 0), s, font=font)
+        return bbox[2] - bbox[0]
+
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if width_of(candidate) <= max_width or not current:
+            if width_of(candidate) <= max_width:
+                current = candidate
+                continue
+            chunk = ""
+            for ch in word:
+                if width_of(chunk + ch) <= max_width:
+                    chunk += ch
+                else:
+                    if chunk:
+                        lines.append(chunk)
+                    chunk = ch
+            current = chunk
+        else:
+            lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+def generate_thumbnail(title: str, output_path: str, theme: dict, category: str = "라이프스타일") -> None:
+    img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
+
+    seed = int(hashlib.md5(title.encode("utf-8")).hexdigest(), 16) % 100000
+    illustration = _fetch_illustration(category, THUMB_SIZE, seed)
+    if illustration is not None:
+        img = Image.blend(img, illustration, alpha=0.10)
+
+    draw = ImageDraw.Draw(img)
+    accent_rgb = _hex_to_rgb(theme["accent"])
+
+    label_font = _load_font(34)
+    label_text = theme["label"]
+    lb = draw.textbbox((0, 0), label_text, font=label_font)
+    pad_x, pad_y = 26, 14
+    badge_w = (lb[2] - lb[0]) + pad_x * 2
+    badge_h = (lb[3] - lb[1]) + pad_y * 2
+    badge_pos = (48, 48)
+    draw.rounded_rectangle(
+        [badge_pos, (badge_pos[0] + badge_w, badge_pos[1] + badge_h)],
+        radius=badge_h // 2, fill=accent_rgb + (255,),
+    )
+    draw.text((badge_pos[0] + pad_x, badge_pos[1] + pad_y - lb[1]), label_text, font=label_font, fill=(255, 255, 255, 255))
+
+    bar_h = 18
+    draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
+
+    max_text_width = THUMB_SIZE[1] - 100
+    max_text_height = int(THUMB_SIZE[1] * 0.55)
+
+    font_size = 72
+    lines, font = [], None
+    while font_size >= 28:
+        font = _load_font(font_size)
+        lines = _wrap_by_pixel_width(draw, title, font, max_text_width)[:3]
+
+        heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
+        total_h = sum(heights) + (len(lines) - 1) * 20
+        full_wrap_count = len(_wrap_by_pixel_width(draw, title, font, max_text_width))
+
+        if total_h <= max_text_height and full_wrap_count <= 3:
+            break
+        font_size -= 4
+
+    if len(_wrap_by_pixel_width(draw, title, font, max_text_width)) > 3:
+        last = lines[-1]
+        while draw.textbbox((0, 0), last + "...", font=font)[2] > max_text_width and len(last) > 1:
+            last = last[:-1]
+        lines[-1] = last.rstrip(".,!? ") + "..."
+
+    y = (THUMB_SIZE[1] - total_h) / 2 + 20
+
+    for line, lh in zip(lines, heights):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        x = (THUMB_SIZE[0] - (bbox[2] - bbox[0])) / 2
+        draw.text((x + 4, y + 4), line, font=font, fill=(0, 0, 0, 160))
+        draw.text((x, y), line, font=font, fill=(255, 255, 255, 255))
+        y += lh + 20
+
+    img.convert("RGB").save(output_path, format="WEBP", quality=82, method=6)
+
+BRAND_GRADIENT = [(15, 23, 42), (30, 41, 59), (51, 65, 85)]
+BRAND_ACCENT = (250, 204, 21)
+
+LOGO_SIZE = (512, 512)
+BANNER_SIZE = (1600, 420)
+
+def generate_site_logo(output_path: str) -> None:
+    img = _make_gradient_background(LOGO_SIZE, BRAND_GRADIENT).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+    w, h = LOGO_SIZE
+
+    margin = 36
+    draw.ellipse([margin, margin, w - margin, h - margin], outline=BRAND_ACCENT + (255,), width=10)
+
+    initial = (SITE_TITLE.strip()[:1] or "B")
+    font = _load_font(220)
+    bbox = draw.textbbox((0, 0), initial, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text(((w - tw) / 2 - bbox[0], (h - th) / 2 - bbox[1]), initial, font=font, fill=(255, 255, 255, 255))
+
+    img.convert("RGB").save(output_path, format="WEBP", quality=90)
+
+def generate_site_banner(output_path: str) -> None:
+    img = _make_gradient_background(BANNER_SIZE, BRAND_GRADIENT).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+    w, h = BANNER_SIZE
+
+    draw.rectangle([(0, 0), (w, 8)], fill=BRAND_ACCENT + (255,))
+
+    title_font = _load_font(88)
+    tagline_font = _load_font(32)
+
+    tb = draw.textbbox((0, 0), SITE_TITLE, font=title_font)
+    tw = tb[2] - tb[0]
+    ty = h / 2 - 60
+    draw.text(((w - tw) / 2, ty), SITE_TITLE, font=title_font, fill=(255, 255, 255, 255))
+
+    lb = draw.textbbox((0, 0), SITE_TAGLINE, font=tagline_font)
+    lw = lb[2] - lb[0]
+    draw.text(((w - lw) / 2, ty + 110), SITE_TAGLINE, font=tagline_font, fill=BRAND_ACCENT + (255,))
+
+    img.convert("RGB").save(output_path, format="WEBP", quality=88)
+
+def ensure_brand_assets() -> None:
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    logo_path = os.path.join(DOCS_DIR, "logo.webp")
+    generate_site_logo(logo_path)
+    generate_site_banner(os.path.join(DOCS_DIR, "banner.webp"))
+
+    favicon_path = os.path.join(DOCS_DIR, "favicon.png")
+    with Image.open(logo_path) as im:
+        im.convert("RGB").resize((64, 64)).save(favicon_path, format="PNG")
+
+def _coupang_deeplink(search_url: str):
+    if not (COUPANG_ACCESS_KEY and COUPANG_SECRET_KEY):
+        return None
+
+    domain = "https://api-gateway.coupang.com"
+    path = "/v2/providers/affiliate_open_api/apis/openapi/v1/deeplink"
+    try:
+        query = urllib.parse.urlencode({"coupangUrls": search_url})
+        path_with_query = f"{path}?{query}"
+        datetime_str = time.strftime("%y%m%dT%H%M%SZ", time.gmtime())
+        message = datetime_str + "GET" + path_with_query
+        signature = hmac.new(COUPANG_SECRET_KEY.encode(), message.encode(), hashlib.sha256).hexdigest()
+        auth_header = (
+            f"CEA algorithm=HmacSHA256, access-key={COUPANG_ACCESS_KEY}, "
+            f"signed-date={datetime_str}, signature={signature}"
+        )
+        resp = requests.get(
+            domain + path_with_query,
+            headers={"Authorization": auth_header, "Content-Type": "application/json"},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        return resp.json()["data"][0]["shortenUrl"]
+    except Exception as e:
+        print(f"  → [쿠팡 딥링크] 발급 실패, 일반 링크로 대체: {e}")
+        return None
+
+def add_ymyl_disclaimer(article: dict) -> dict:
+    theme = get_theme(article.get("category", "라이프스타일"))
+    if not theme.get("ymyl"):
+        return article
+
+    disclaimer = (
+        '<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;'
+        'padding:14px 18px;margin:24px 0;font-size:0.92em;color:#5d4037;">'
+        '⚠️ <b>안내:</b> 이 글은 일반적인 정보 제공 목적으로 작성되었으며, 특정 상품·기관을 보증하지 않습니다. '
+        '금리, 자격 요건, 지원금액, 신청 기간 등은 수시로 바뀔 수 있으니 '
+        '반드시 해당 금융기관 또는 정부24·관할 지자체 등 공식 채널에서 최신 정보를 확인하세요.'
+        '</div>'
+    )
+    article["html_body"] += disclaimer
+    return article
+
+def _relevance_score(article: dict, candidate: dict) -> float:
+    score = 0.0
+    if candidate.get("category") == article.get("category", "라이프스타일"):
+        score += 3.0
+
+    current_words = set(re.findall(r"[\w가-힣]+", (article.get("title", "") + " " + article.get("keyword", ""))))
+    candidate_words = set(re.findall(r"[\w가-힣]+", candidate.get("title", "")))
+    overlap = len(current_words & candidate_words)
+    score += overlap * 1.5
+
+    return score
+
+def add_internal_link(article: dict) -> dict:
+    if not os.path.exists(POSTS_JSON):
+        return article
+    with open(POSTS_JSON, "r", encoding="utf-8") as f:
+        posts = json.load(f)
+    if not posts:
+        return article
+
+    scored = [(p, _relevance_score(article, p)) for p in posts]
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    top_pool = [p for p, s in scored[:5] if s > 0] or [p for p, s in scored[:5]]
+    if not top_pool:
+        return article
+
+    weights = [max(s, 0.5) for p, s in scored[:len(top_pool)]]
+    pick = random.choices(top_pool, weights=weights, k=1)[0]
+
+    link_html = (
+        f'<p style="margin-top:2em;padding-top:1em;border-top:1px dashed #ddd;">'
+        f'🔗 이 글도 함께 보면 좋아요: <a href="../{pick["file"]}">{pick["title"]}</a></p>'
+    )
+    article["html_body"] += link_html
+    return article
+
+def _manual_ad_unit() -> str:
+    if not (ADSENSE_CLIENT_ID and ADSENSE_SLOT_ID):
+        return ""
+    return (
+        '<div style="margin:28px 0;text-align:center;">'
+        f'<ins class="adsbygoogle" style="display:block" data-ad-client="{ADSENSE_CLIENT_ID}" '
+        f'data-ad-slot="{ADSENSE_SLOT_ID}" data-ad-format="auto" data-full-width-responsive="true"></ins>'
+        '<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'
+        '</div>'
+    )
+
+def insert_manual_ads(article: dict) -> dict:
+    ad_html = _manual_ad_unit()
+    if not ad_html:
+        return article
+
+    # [버그 수정]: 본문 중간 이미지 코드 삽입 후 첫 H2 바로 직전에 들어가도록 안전 검색
+    idx = article["html_body"].find("<h2")
+    if idx != -1:
+        article["html_body"] = article["html_body"][:idx] + ad_html + article["html_body"][idx:]
+    else:
+        article["html_body"] += ad_html
+    return article
+
+def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
+    base_prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"])
+    prompt = base_prompt.replace("flat vector illustration of", "photo illustration of") + ", high quality, natural lighting"
+    url = (
+        f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
+        f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
+    )
+    try:
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+        if img.size != size:
+            img = img.resize(size)
+        return img
+    except Exception as e:
+        print(f"  → [본문 이미지] 생성 실패, 삽입 건너뜀: {e}")
+        return None
+
+def insert_content_image(article: dict, slug: str) -> dict:
+    category = article.get("category", "라이프스타일")
+    seed = int(hashlib.md5((article["title"] + "-inline").encode("utf-8")).hexdigest(), 16) % 100000
+    photo = _fetch_content_photo(category, seed)
+    if photo is None:
+        return article
+
+    filename = f"{slug}-inline.webp"
+    path = os.path.join(DOCS_DIR, "thumbs", filename)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    photo.save(path, format="WEBP", quality=82, method=6)
+
+    img_html = (
+        f'<img src="../thumbs/{filename}" alt="{article["title"]} 관련 이미지" loading="lazy" '
+        'style="width:100%;border-radius:10px;margin:20px 0;">'
+    )
+    idx = article["html_body"].find("</h2>")
+    if idx != -1:
+        insert_at = idx + len("</h2>")
+        article["html_body"] = article["html_body"][:insert_at] + img_html + article["html_body"][insert_at:]
+    else:
+        article["html_body"] = img_html + article["html_body"]
+    return article
+
+def add_coupang_markup(article: dict) -> dict:
+    product_keyword = (article.get("product_keyword") or "").strip()
+    if not product_keyword:
+        print("  → 마크업 링크: 이 주제는 상품과 관련이 없어 추천 섹션을 생략합니다.")
+        return article
+
+    search_url = f"https://www.coupang.com/np/search?q={urllib.parse.quote(product_keyword)}"
+    if COUPANG_PARTNER_TAG:
+        search_url += f"&lptag={COUPANG_PARTNER_TAG}"
+
+    link = _coupang_deeplink(search_url) or search_url
+    link_type = "쿠팡파트너스 딥링크" if link != search_url else "일반 검색 링크"
+    print(f"  → 마크업 링크 방식: {link_type} (검색어: {product_keyword})")
+
+    extra_html = (
+        f'<h2>관련 추천 상품</h2>'
+        f'<p><a href="{link}" target="_blank" rel="nofollow sponsored">{product_keyword} 관련 인기 상품 보러가기</a></p>'
+        '<p style="font-size:0.85em;color:#888;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, '
+        '이에 따른 일정액의 수수료를 제공받습니다.</p>'
+    )
+    article["html_body"] += extra_html
+    return article
+
+def _font_family_name(font_param: str) -> str:
+    return font_param.split(":")[0].replace("+", " ")
+
+def _build_post_nav_html() -> str:
+    prev_post = None
+    if os.path.exists(POSTS_JSON):
+        with open(POSTS_JSON, "r", encoding="utf-8") as f:
+            posts = json.load(f)
+        if posts:
+            prev_post = posts[0]
+
+    prev_html = (
+        f'<a href="../{prev_post["file"]}"><img src="../{prev_post["thumb"]}" alt="이전 게시물">'
+        f'<span>← 이전 게시물: {prev_post["title"]}</span></a>'
+        if prev_post else
+        '<a href="../index.html"><span class="nav-icon">🏠</span><span>목록으로</span></a>'
+    )
+    latest_html = '<a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a>'
+
+    return f'<div class="post-nav">{prev_html}{latest_html}</div>'
+
+def _build_related_html(exclude_slug: str) -> str:
+    if not os.path.exists(POSTS_JSON):
+        return ""
+    with open(POSTS_JSON, "r", encoding="utf-8") as f:
+        posts = json.load(f)
+    posts = [p for p in posts if p.get("file") != exclude_slug][:3]
+    if not posts:
+        return ""
+
+    # [버그 수정]: posts/ 구조 내부에서 서빙될 때 엑박 방지를 위해 경로 앞에 ../ 추가
+    cards = "\n".join(
+        f'<a class="related-card" href="../{p["file"]}"><img src="../{p["thumb"]}" alt="{p["title"]}" loading="lazy">'
+        f'<span>{p["title"]}</span></a>'
+        for p in posts
+    )
+    return f'<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid">{cards}</div></div>'
+
+def save_post(article: dict):
+    os.makedirs(POSTS_DIR, exist_ok=True)
+    os.makedirs(os.path.join(DOCS_DIR, "thumbs"), exist_ok=True)
+
+    category = article.get("category", "라이프스타일")
+    theme = get_theme(category)
+
+    slug = slugify(article["keyword"])
+    today = datetime.now().strftime("%Y-%m-%d")
+    thumb_filename = f"{slug}-{today}.webp"
+    post_filename = f"{slug}-{today}.html"
+
+    generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme, category)
+
+    article = insert_content_image(article, slug)
+    article["html_body"] += build_faq_section_html(article, theme["accent"])
+
+    post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
+    thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
+
+    title = article["title"]
+    meta_description = article.get("meta_description", "")
+    json_ld = build_json_ld(article, post_url, thumb_url, today)
+    related_html = _build_related_html(exclude_slug=f"posts/{post_filename}")
+    post_nav = _build_post_nav_html()
+    decor_html = build_decor_html(theme, seed=slug)
+
+    html = POST_TEMPLATE.format(
+        title=title,
+        meta_description=meta_description,
+        date=today,
+        html_body=article["html_body"],
+        thumb_filename=thumb_filename,
+        canonical_url=post_url,
+        thumb_url=thumb_url,
+        json_ld=json_ld,
+        ga_snippet=_ga_snippet(),
+        adsense_snippet=_adsense_snippet(),
+        font=theme["font"],
+        font_family=_font_family_name(theme["font"]),
+        accent=theme["accent"],
+        badge=theme["badge"],
+        related_html=related_html,
+        post_nav=post_nav,
+        decor_html=decor_html,
+        bottom_ad=_manual_ad_unit(),
+        search_console_meta=_search_console_meta(),
+        translate_widget=_translate_widget(),
+    )
+    with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
+        f.write(html)
+
+    post_meta = {
+        "title": title,
+        "file": f"posts/{post_filename}",
+        "thumb": f"thumbs/{thumb_filename}",
+        "date": today,
+        "category": category,
+        "accent": theme["accent"],
+        "badge": theme["badge"],
+    }
+    local_thumb_path = os.path.join(DOCS_DIR, "thumbs", thumb_filename)
+    return post_meta, json_ld, thumb_url, local_thumb_path, post_url
+
+def update_index(new_post: dict) -> list:
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    posts = []
+    if os.path.exists(POSTS_JSON):
+        with open(POSTS_JSON, "r", encoding="utf-8") as f:
+            posts = json.load(f)
+
+    posts.insert(0, new_post)
+    with open(POSTS_JSON, "w", encoding="utf-8") as f:
+        json.dump(posts, f, ensure_ascii=False, indent=2)
+
+    hero_posts, mid_posts, bottom_posts = posts[:1], posts[1:3], posts[3:]
+
+    hero_html = ""
+    if hero_posts:
+        p = hero_posts[0]
+        hero_html = (
+            '<div class="tier-label">🔥 최신 이야기</div>'
+            f'<a class="hero" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}" loading="eager" fetchpriority="high">'
+            f'<div class="hero-body"><span class="hero-badge" style="background:{p.get("accent", "#4a90d9")}">'
+            f'{p.get("badge", "✨ 라이프스타일")}</span>'
+            f'<div class="hero-title">{p["title"]}</div>'
+            f'<div class="date">{p["date"]}</div></div></a>'
+        )
+
+    mid_html = ""
+    if mid_posts:
+        cards = "\n".join(
+            f'<a class="mid-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}" loading="lazy">'
+            f'<div class="mid-body"><span class="badge-sm" style="background:{p.get("accent", "#4a90d9")}">'
+            f'{p.get("badge", "✨ 라이프스타일")}</span>'
+            f'<div class="mid-title">{p["title"]}</div>'
+            f'<div class="date">{p["date"]}</div></div></a>'
+            for p in mid_posts
+        )
+        mid_html = f'<div class="tier-label">📖 다음 이야기</div><div class="mid-grid">{cards}</div>'
+
+    bottom_html = ""
+    if bottom_posts:
+        cards = "\n".join(
+            f'<a class="bottom-card" href="{p["file"]}"><img src="{p["thumb"]}" alt="{p["title"]}" loading="lazy">'
+            f'<div class="bottom-body"><span class="badge-sm" style="background:{p.get("accent", "#4a90d9")}">'
+            f'{p.get("badge", "✨ 라이프스타일")}</span>'
+            f'<div class="bottom-title">{p["title"]}</div></div></a>'
+            for p in bottom_posts
+        )
+        bottom_html = f'<div class="tier-label">🗂️ 지난 글 모아보기</div><div class="bottom-grid">{cards}</div>'
+
+    with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
+        category_pills = "".join(
+            f'<span class="pill" style="background:{t["accent"]}">{t["badge"]}</span>'
+            for t in CATEGORY_THEMES.values()
+        )
+        f.write(INDEX_TEMPLATE.format(
+            site_title=SITE_TITLE,
+            site_tagline=SITE_TAGLINE,
+            site_url=SITE_URL or ".", ga_snippet=_ga_snippet(),
+            adsense_snippet=_adsense_snippet(),
+            fonts_url=_google_fonts_url(),
+            hero_html=hero_html, mid_html=mid_html, bottom_html=bottom_html,
+            blog_json_ld=build_blog_index_json_ld(posts),
+            category_pills=category_pills,
+            search_console_meta=_search_console_meta(),
+            footer_html=build_footer_html(),
+            translate_widget=_translate_widget(),
+        ))
+
+    return posts
+
+STATIC_PAGE_TEMPLATE = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{page_title} - {site_title}</title>
+<link rel="icon" type="image/png" href="favicon.png">{search_console_meta}{ga_snippet}{adsense_snippet}
+<style>
+  body {{ max-width: 680px; margin: 0 auto; padding: 40px 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.8; color: #222; }}
+  h1 {{ font-size: 1.6em; }}
+  h2 {{ font-size: 1.15em; margin-top: 1.6em; }}
+  a.back {{ color: #4a90d9; text-decoration: none; display:inline-block; margin-bottom: 20px; }}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← 홈으로</a>
+<h1>{page_title}</h1>
+{page_body}
+</body>
+</html>
+"""
+
+def build_footer_html() -> str:
+    return (
+        '<div class="site-footer">'
+        '<a href="about.html">블로그 소개</a>·'
+        '<a href="privacy.html">개인정보처리방침</a>·'
+        '<a href="contact.html">문의하기</a>'
+        f'<div style="margin-top:8px;">© {datetime.now().year} {SITE_TITLE}</div>'
+        '</div>'
+    )
+
+def generate_static_pages() -> None:
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    common_kwargs = dict(
+        site_title=SITE_TITLE,
+        search_console_meta=_search_console_meta(),
+        ga_snippet=_ga_snippet(),
+        adsense_snippet=_adsense_snippet(),
+    )
+
+    pages = {
+        "about.html": (
+            "블로그 소개",
+            f"<p>{SITE_TITLE}에 오신 것을 환영합니다.</p>"
+            f"<p>{SITE_TAGLINE}</p>"
+            "<p>이 블로그는 다양한 주제의 정보를 정리해서 소개하며, 콘텐츠 제작 과정 일부에 "
+            "AI 도구를 활용하고 있습니다. 게시된 정보는 참고용이며, 중요한 결정을 내리실 때는 "
+            "반드시 공식 출처를 함께 확인해주세요.</p>",
+        ),
+        "privacy.html": (
+            "개인정보처리방침",
+            "<p>본 블로그는 구글 애널리틱스(GA4) 및 구글 애드센스를 통해 방문자 통계와 광고를 "
+            "제공할 수 있습니다. 이 과정에서 쿠키(Cookie)가 사용될 수 있으며, 쿠키를 통해 "
+            "수집되는 정보에는 개인을 직접 식별할 수 있는 정보는 포함되지 않습니다.</p>"
+            "<h2>쿠키 및 광고</h2>"
+            "<p>구글을 포함한 제3자 광고 공급업체는 쿠키를 사용하여 사용자의 이전 방문 기록을 "
+            "기반으로 광고를 게재합니다. 이용자는 "
+            '<a href="https://adssettings.google.com" target="_blank">구글 광고 설정</a>에서 '
+            "맞춤 광고를 비활성화할 수 있습니다.</p>"
+            "<h2>문의</h2>"
+            "<p>개인정보 관련 문의사항은 문의하기 페이지를 통해 연락 주시기 바랍니다.</p>",
+        ),
+        "contact.html": (
+            "문의하기",
+            "<p>블로그 콘텐츠 관련 문의, 협업 제안, 오류 신고 등은 아래 이메일로 연락 주세요.</p>"
+            "<p><b>이메일:</b> 이 페이지의 문구를 직접 열어 본인의 연락처로 수정해주세요.</p>",
+        ),
+    }
+
+    for filename, (page_title, page_body) in pages.items():
+        path = os.path.join(DOCS_DIR, filename)
+        if os.path.exists(path):
+            continue
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(STATIC_PAGE_TEMPLATE.format(page_title=page_title, page_body=page_body, **common_kwargs))
+        print(f"  → [설정] {filename} 생성됨 (내용은 실제 정보로 직접 수정 권장)")
+
+def update_dashboard(posts: list) -> None:
+    rows = "\n".join(
+        f'<tr><td>{p["date"]}</td><td>{p["title"]}</td><td><a href="{p["file"]}">보기</a></td></tr>'
+        for p in posts
+    )
+    with open(os.path.join(DOCS_DIR, "dashboard.html"), "w", encoding="utf-8") as f:
+        f.write(DASHBOARD_TEMPLATE.format(site_title=SITE_TITLE, post_count=len(posts), rows=rows))
+
+def update_seo_files(posts: list) -> None:
+    if not SITE_URL:
+        print("  → [SEO] SITE_URL이 설정되지 않아 sitemap.xml/robots.txt 생성을 건너뜁니다.")
+        return
+
+    url_entries = "\n".join(f"<url><loc>{SITE_URL}/{p['file']}</loc></url>" for p in posts)
+    with open(os.path.join(DOCS_DIR, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write(SITEMAP_TEMPLATE.format(site_url=SITE_URL, url_entries=url_entries))
+
+    with open(os.path.join(DOCS_DIR, "robots.txt"), "w", encoding="utf-8") as f:
+        f.write(ROBOTS_TXT.format(site_url=SITE_URL))
+
+def _blogger_configured() -> bool:
+    return bool(BLOGGER_BLOG_ID and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN)
+
+def _get_blogger_access_token() -> str:
+    resp = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "refresh_token": GOOGLE_REFRESH_TOKEN,
+            "grant_type": "refresh_token",
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+def _make_blogger_safe_html(html_body: str) -> str:
+    if SITE_URL:
+        html_body = html_body.replace('href="../posts/', f'href="{SITE_URL}/posts/')
+        html_body = html_body.replace('href="../thumbs/', f'href="{SITE_URL}/thumbs/')
+        html_body = html_body.replace('src="../thumbs/', f'src="{SITE_URL}/thumbs/')
+    else:
+        html_body = re.sub(r'<a href="\.\./(posts|thumbs)/[^"]*"[^>]*>(.*?)</a>', r"\2", html_body)
+        html_body = re.sub(r'<img src="\.\./thumbs/[^"]*"[^>]*>', "", html_body)
+    return html_body
+
+def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_thumb_path: str) -> None:
+    if not _blogger_configured():
+        print("  → [블로거] 관련 Secrets가 없어 건너뜁니다 (GitHub Pages만 발행).")
+        return
+
+    try:
+        access_token = _get_blogger_access_token()
+        theme = get_theme(article.get("category", "라이프스타일"))
+        today = datetime.now().strftime("%Y-%m-%d")
+        blogger_json_ld = build_json_ld(article, canonical_url, thumb_url, today, platform="blogger")
+
+        try:
+            with open(local_thumb_path, "rb") as f:
+                img_b64 = base64.b64encode(f.read()).decode("ascii")
+            img_src = f"data:image/webp;base64,{img_b64}"
+        except Exception as e:
+            print(f"  → [블로거] 썸네일 base64 인코딩 실패, 외부 링크로 대체: {e}")
+            img_src = thumb_url
+
+        content_html = (
+            f'{_translate_widget()}'
+            f'<img src="{img_src}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
+            f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
+            f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
+            f'{_make_blogger_safe_html(article["html_body"])}'
+            f'<script type="application/ld+json">{blogger_json_ld}</script>'
+        )
+
+        url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOGGER_BLOG_ID}/posts/"
+        payload = {"title": article["title"], "content": content_html}
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        resp.raise_for_status()
+        result = resp.json()
+        print(f"  → [블로거] 발행 완료: {result.get('url', '(URL 확인 불가)')}")
+    except Exception as e:
+        print(f"  → [블로거] 발행 실패 (GitHub Pages 발행은 정상 진행됨): {e}")
+
+def ensure_nojekyll() -> None:
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    nojekyll_path = os.path.join(DOCS_DIR, ".nojekyll")
+    if not os.path.exists(nojekyll_path):
+        open(nojekyll_path, "w").close()
+        print("  → [설정] .nojekyll 파일 생성 (Jekyll 가공 비활성화)")
+
+def run():
+    title = get_title_from_args_or_queue()
+    print(f"[처리 시작] 제목: {title}")
+
+    ensure_nojekyll()
+    ensure_brand_assets()
+    generate_static_pages()
+
+    article = generate_article(title)
+    print(f"  → 글 생성 완료: {article['title']}")
+
+    article = add_internal_link(article)
+    article = insert_manual_ads(article)
+    article = add_coupang_markup(article)
+    article = add_ymyl_disclaimer(article)
+    post_meta, json_ld, thumb_url, local_thumb_path, post_url = save_post(article)
+    posts = update_index(post_meta)
+    update_dashboard(posts)
+    update_seo_files(posts)
+    publish_to_blogger(article, post_url, thumb_url, local_thumb_path)
+
+    print(f"  → 저장 완료: docs/{post_meta['file']}, docs/{post_meta['thumb']}")
+    print(f"  → 대시보드/사이트맵 갱신 완료")
+
+if __name__ == "__main__":
+    try:
+        run()
+    except Exception as e:
+        print(f"[오류] {e}")
+        sys.exit(1)
