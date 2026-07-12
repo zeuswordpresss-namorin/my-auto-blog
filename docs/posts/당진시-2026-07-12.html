@@ -82,8 +82,8 @@
   h2 { font-family: 'Gowun Dodum', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, #11998e22, transparent); border-left: 5px solid #11998e; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }
   p { margin: 1em 0; position: relative; z-index: 1; }
   table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; margin: 1.5em 0; }
-  th, td { border: 1px solid #ddd; padding: 10px 14px; text-align: left; }
-  th { background-color: #f9f9f9; font-weight: 700; }
+  th { background: #f2f2f2; font-weight: 700; text-align: left; }
+  th, td { padding: 10px 14px; border: 1px solid #e0e0e0; font-size: 0.93em; }
   a.back { display: inline-block; margin: 20px 0; color: #11998e; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }
   .meta { color: #999; font-size: 0.85em; margin-bottom: 4px; }
   .related { margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }
@@ -97,6 +97,13 @@
   .post-nav img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
   .post-nav .nav-icon { width: 28px; height: 28px; border-radius: 50%; background: #11998e; color: #fff; display:flex; align-items:center; justify-content:center; font-size: 14px; flex-shrink: 0; }
   .post-nav span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  /* 아코디언 스타일 커스텀 개선 */
+  details summary::-webkit-details-marker { display: none; }
+  details summary { display: flex; align-items: center; justify-content: space-between; }
+  details summary::after { content: '▼'; font-size: 0.8em; color: #11998e; transition: transform 0.2s; }
+  details[open] summary::after { content: '▲'; }
+
   @media (max-width: 480px) {
     .related-grid { grid-template-columns: 1fr 1fr; }
     .post-nav a { font-size: 0.78em; flex: 1 1 100%; }
@@ -124,7 +131,7 @@ function googleTranslateElementInit() {
 }
 </script>
 <script src="//[translate.google.com/translate_a/element.js?cb=googleTranslateElementInit](https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit)"></script>
-<div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:84%;left:86%;font-size:33px;opacity:0.12;transform:rotate(6deg);">✈️</span><span class="decor-item" style="top:1%;left:11%;font-size:47px;opacity:0.1;transform:rotate(-26deg);">📸</span><span class="decor-item" style="top:32%;left:87%;font-size:43px;opacity:0.15;transform:rotate(6deg);">🌴</span><span class="decor-item" style="top:95%;left:19%;font-size:33px;opacity:0.07;transform:rotate(1deg);">✈️</span><span class="decor-item" style="top:54%;left:56%;font-size:58px;opacity:0.14;transform:rotate(-13deg);">🗺️</span><span class="decor-item" style="top:60%;left:19%;font-size:39px;opacity:0.11;transform:rotate(19deg);">📸</span><span class="decor-item" style="top:45%;left:51%;font-size:58px;opacity:0.1;transform:rotate(-23deg);">🗺️</span><span class="decor-item" style="top:41%;left:52%;font-size:28px;opacity:0.08;transform:rotate(28deg);">🚗</span><span class="decor-item" style="top:75%;left:17%;font-size:34px;opacity:0.11;transform:rotate(-18deg);">🌴</span><span class="decor-item" style="top:30%;left:61%;font-size:49px;opacity:0.14;transform:rotate(16deg);">📸</span><span class="decor-item" style="top:24%;left:16%;font-size:52px;opacity:0.1;transform:rotate(-8deg);">📸</span><span class="decor-item" style="top:7%;left:90%;font-size:48px;opacity:0.12;transform:rotate(-11deg);">📸</span></div>
+<div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:26%;left:81%;font-size:26px;opacity:0.14;transform:rotate(12deg);">🗺️</span><span class="decor-item" style="top:60%;left:87%;font-size:36px;opacity:0.08;transform:rotate(13deg);">🧳</span><span class="decor-item" style="top:30%;left:4%;font-size:34px;opacity:0.14;transform:rotate(-22deg);">✈️</span><span class="decor-item" style="top:12%;left:57%;font-size:35px;opacity:0.07;transform:rotate(-17deg);">🏖️</span><span class="decor-item" style="top:33%;left:5%;font-size:53px;opacity:0.1;transform:rotate(5deg);">🗼</span><span class="decor-item" style="top:4%;left:74%;font-size:28px;opacity:0.09;transform:rotate(20deg);">📸</span><span class="decor-item" style="top:7%;left:69%;font-size:48px;opacity:0.1;transform:rotate(0deg);">🗺️</span><span class="decor-item" style="top:95%;left:39%;font-size:27px;opacity:0.13;transform:rotate(-4deg);">🧳</span><span class="decor-item" style="top:44%;left:82%;font-size:41px;opacity:0.13;transform:rotate(11deg);">🗺️</span><span class="decor-item" style="top:83%;left:21%;font-size:46px;opacity:0.13;transform:rotate(5deg);">🗼</span><span class="decor-item" style="top:2%;left:87%;font-size:27px;opacity:0.12;transform:rotate(2deg);">✈️</span><span class="decor-item" style="top:52%;left:78%;font-size:34px;opacity:0.13;transform:rotate(-19deg);">🌴</span></div>
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
 <div class="hero"><img src="../thumbs/당진시-2026-07-12.webp" alt="충남 당진 가볼만한곳 추천, 서해안 숨은 명소 여행 코스" loading="eager" fetchpriority="high"></div>
@@ -159,10 +166,10 @@ function googleTranslateElementInit() {
 <p><strong>숙박:</strong> 당진 시내에는 다양한 비즈니스호텔과 모텔이 있으며, 왜목마을이나 삽교호 주변에는 바다 전망을 즐길 수 있는 펜션과 리조트도 많습니다. 개인의 예산과 여행 스타일에 맞춰 선택할 수 있습니다.</p>
 
 <p>당진은 복잡한 일상에서 벗어나 휴식과 재충전의 시간을 가질 수 있는 완벽한 여행지입니다. 아름다운 자연경관, 풍부한 역사와 문화, 그리고 맛있는 음식이 어우러진 당진에서 잊지 못할 추억을 만들어보세요. 매력적인 서해안 도시 당진이 여러분을 기다립니다!</p><p style="margin-top:2em;padding-top:1em;border-top:1px dashed #ddd;">🔗 이 글도 함께 보면 좋아요: <a href="../posts/프랑스-스페인-2026-07-12.html">프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험</a></p><h2>관련 추천 상품</h2><p><a href="[https://www.coupang.com/np/search?q=](https://www.coupang.com/np/search?q=)%EA%B5%AD%EB%82%B4%EC%97%AC%ED%96%89%20%EA%B0%80%EC%9D%B4%EB%93%9C%EB%B6%81" target="_blank" rel="nofollow sponsored">국내여행 가이드북 관련 인기 상품 보러가기</a></p><p style="font-size:0.85em;color:#888;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-<div class="post-nav"><a href="../posts/argentina-vs-switzerland-2026-07-12.html"><img src="../thumbs/argentina-vs-switzerland-2026-07-12.webp" alt="이전 게시물"><span>← 이전 게시물: 아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
-<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/argentina-vs-switzerland-2026-07-12.html"><img src="../thumbs/argentina-vs-switzerland-2026-07-12.webp" alt="아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고" loading="lazy"><span>아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고</span></a>
-<a class="related-card" href="../posts/피파랭킹-2026-07-12.html"><img src="../thumbs/피파랭킹-2026-07-12.webp" alt="피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법" loading="lazy"><span>피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법</span></a>
-<a class="related-card" href="../posts/프랑스-스페인-2026-07-12.html"><img src="../thumbs/프랑스-스페인-2026-07-12.webp" alt="프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험" loading="lazy"><span>프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험</span></a></div></div>
+<div class="post-nav"><a href="../posts/월드컵-결과-2026-07-12.html"><img src="../thumbs/월드컵-결과-2026-07-12.webp" alt="이전 게시물"><span>← 이전 게시물: 역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
+<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/월드컵-결과-2026-07-12.html"><img src="../thumbs/월드컵-결과-2026-07-12.webp" alt="역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면" loading="lazy"><span>역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면</span></a>
+<a class="related-card" href="../posts/fifa-world-cup-2026-2026-07-12.html"><img src="../thumbs/fifa-world-cup-2026-2026-07-12.webp" alt="2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석" loading="lazy"><span>2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석</span></a>
+<a class="related-card" href="../posts/argentina-vs-switzerland-2026-07-12.html"><img src="../thumbs/argentina-vs-switzerland-2026-07-12.webp" alt="아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고" loading="lazy"><span>아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고</span></a></div></div>
 
 </div>
 </body>
