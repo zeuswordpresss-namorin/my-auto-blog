@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.2 - 안전 영역 최적화 및 FAQ 아코디언 버그 수정 버전)
+GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.3 - 네이버/블로거 가젯 1:1 크롭 대응 안전 영역 최적화 버전)
 """
 
 import base64
@@ -190,7 +190,6 @@ DEFAULT_THEME = CATEGORY_THEMES["라이프스타일"]
 def get_theme(category: str) -> dict:
     return CATEGORY_THEMES.get(category, DEFAULT_THEME)
 
-# 본문용 일러스트 프롬프트 스타일 수정 (무료 연필 펜 드로잉 선화 형식 최적화)
 ILLUSTRATION_PROMPTS = {
     "뷰티패션": "minimalist pencil sketch style illustration of cosmetics lipstick and fashion clothing items, clean line art",
     "푸드맛집": "minimalist pencil sketch style illustration of food dishes and cafe coffee items, clean line art",
@@ -268,7 +267,6 @@ def _adsense_snippet() -> str:
         f'?client={ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>'
     )
 
-# 아코디언 컴포넌트 스타일 및 아코디언 정상 노출 구조 수정
 def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
     if not article.get("faq_items"):
         return ""
@@ -422,7 +420,6 @@ POST_TEMPLATE = """<!DOCTYPE html>
   .post-nav .nav-icon {{ width: 28px; height: 28px; border-radius: 50%; background: {accent}; color: #fff; display:flex; align-items:center; justify-content:center; font-size: 14px; flex-shrink: 0; }}
   .post-nav span {{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
   
-  /* 아코디언 스타일 커스텀 개선 */
   details summary::-webkit-details-marker {{ display: none; }}
   details summary {{ display: flex; align-items: center; justify-content: space-between; }}
   details summary::after {{ content: '▼'; font-size: 0.8em; color: {accent}; transition: transform 0.2s; }}
@@ -779,7 +776,7 @@ def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
         lines.append(current)
     return lines
 
-# [개선 1]: 섬네일 텍스트 글자 잘림 해결 및 안전 영역 최적화 적용
+# [안전 영역 극대화 수정 버전]: 네이버/구글 블로거 가젯에서 1:1 정사각형 정중앙 크롭 시 글자 잘림 완벽 해결
 def generate_thumbnail(title: str, output_path: str, theme: dict, category: str = "라이프스타일") -> None:
     img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
 
@@ -791,56 +788,59 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     draw = ImageDraw.Draw(img)
     accent_rgb = _hex_to_rgb(theme["accent"])
 
-    label_font = _load_font(34)
+    # 1. 1:1 정사각형 크롭 영역(중앙 720x720) 안에 배치되도록 배지 위치 조정 (X좌표 280 이상으로 당김)
+    label_font = _load_font(32)
     label_text = theme["label"]
     lb = draw.textbbox((0, 0), label_text, font=label_font)
-    pad_x, pad_y = 26, 14
+    pad_x, pad_y = 22, 10
     badge_w = (lb[2] - lb[0]) + pad_x * 2
     badge_h = (lb[3] - lb[1]) + pad_y * 2
     
-    # 안정 영역 배치 (좌상단 패딩 확보)
-    badge_pos = (80, 80)
+    badge_x = (THUMB_SIZE[0] - badge_w) // 2  # 완전 중앙 정렬하여 1:1 크롭 시에도 안전하게 노출
+    badge_y = 75
     draw.rounded_rectangle(
-        [badge_pos, (badge_pos[0] + badge_w, badge_pos[1] + badge_h)],
+        [badge_x, badge_y, badge_x + badge_w, badge_y + badge_h],
         radius=badge_h // 2, fill=accent_rgb + (255,),
     )
-    draw.text((badge_pos[0] + pad_x, badge_pos[1] + pad_y - lb[1]), label_text, font=label_font, fill=(255, 255, 255, 255))
+    draw.text((badge_x + pad_x, badge_y + pad_y - lb[1]), label_text, font=label_font, fill=(255, 255, 255, 255))
 
     bar_h = 18
     draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
 
-    # 좌우 최소 100px의 단단한 여백(패딩) 공간 지정하여 글자 잘림 완전 원천 차단
-    max_text_width = THUMB_SIZE[0] - 200  
-    max_text_height = int(THUMB_SIZE[1] * 0.50)
+    # 2. 핵심 수정: 1:1 정사각형 가로 영역(720px)에서 좌우 안전마진 50px씩을 차감하여 최대 가로폭을 620px로 한정!
+    max_text_width = 620  
+    max_text_height = int(THUMB_SIZE[1] * 0.65)
 
-    font_size = 72
+    # 공간이 좁아졌으므로 폰트 시작 크기를 64로 낮추고 유동적으로 조절, 줄바꿈은 최대 4줄까지 허용
+    font_size = 64
     lines, font = [], None
-    while font_size >= 28:
+    while font_size >= 24:
         font = _load_font(font_size)
-        lines = _wrap_by_pixel_width(draw, title, font, max_text_width)[:3]
+        lines = _wrap_by_pixel_width(draw, title, font, max_text_width)[:4]
 
         heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
-        total_h = sum(heights) + (len(lines) - 1) * 20
+        total_h = sum(heights) + (len(lines) - 1) * 16
         full_wrap_count = len(_wrap_by_pixel_width(draw, title, font, max_text_width))
 
-        if total_h <= max_text_height and full_wrap_count <= 3:
+        if total_h <= max_text_height and full_wrap_count <= 4:
             break
         font_size -= 4
 
-    if len(_wrap_by_pixel_width(draw, title, font, max_text_width)) > 3:
+    if len(_wrap_by_pixel_width(draw, title, font, max_text_width)) > 4:
         last = lines[-1]
         while draw.textbbox((0, 0), last + "...", font=font)[2] > max_text_width and len(last) > 1:
             last = last[:-1]
         lines[-1] = last.rstrip(".,!? ") + "..."
 
-    y = (THUMB_SIZE[1] - total_h) / 2 + 40
+    # 3. 세로축 정렬 위치 최적화
+    y = (THUMB_SIZE[1] - total_h) / 2 + 50
 
     for line, lh in zip(lines, heights):
         bbox = draw.textbbox((0, 0), line, font=font)
-        x = (THUMB_SIZE[0] - (bbox[2] - bbox[0])) / 2
+        x = (THUMB_SIZE[0] - (bbox[2] - bbox[0])) / 2  # 전체 이미지 기준 중앙 정렬 (1:1 크롭 시에도 동일하게 중앙 위치)
         draw.text((x + 4, y + 4), line, font=font, fill=(0, 0, 0, 160))
         draw.text((x, y), line, font=font, fill=(255, 255, 255, 255))
-        y += lh + 20
+        y += lh + 16
 
     img.convert("RGB").save(output_path, format="WEBP", quality=82, method=6)
 
@@ -1017,7 +1017,6 @@ def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
         print(f"  → [본문 이미지] 생성 실패, 삽입 건너뜀: {e}")
         return None
 
-# [개선 3]: 본문 일러스트를 감성적인 선화 펜드로잉(Line Art) 스타일로 최적화 생성 및 정밀 배치
 def insert_content_image(article: dict, slug: str) -> dict:
     category = article.get("category", "라이프스타일")
     seed = int(hashlib.md5((article["title"] + "-inline").encode("utf-8")).hexdigest(), 16) % 100000
@@ -1037,7 +1036,6 @@ def insert_content_image(article: dict, slug: str) -> dict:
         f'</div>'
     )
     
-    # 첫 번째 H2 소제목이 닫힌 바로 다음 위치(소제목 아래)에 정밀하게 삽입되도록 구조 수정
     idx = article["html_body"].find("</h2>")
     if idx != -1:
         insert_at = idx + len("</h2>")
@@ -1106,7 +1104,6 @@ def _build_related_html(exclude_slug: str) -> str:
     )
     return f'<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid">{cards}</div></div>'
 
-# [개선 2]: AI 본문에서 발생한 중복 표를 정리하고, 아코디언 컴포넌트를 올바른 레이아웃 순서로 추가하도록 재설계
 def save_post(article: dict):
     os.makedirs(POSTS_DIR, exist_ok=True)
     os.makedirs(os.path.join(DOCS_DIR, "thumbs"), exist_ok=True)
@@ -1119,18 +1116,15 @@ def save_post(article: dict):
     thumb_filename = f"{slug}-{today}.webp"
     post_filename = f"{slug}-{today}.html"
 
-    # 1단계. 섬네일 이미지 파일 독립 생성 및 가공 (안정영역 최적화 버전)
     generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme, category)
 
-    # 2단계. AI가 가끔 본문 내부에 무작위 텍스트나 간이 표 형태로 집어넣는 Q&A 중복 패턴 정규식으로 안전하게 사전 제거
     cleaned_body = article["html_body"]
     cleaned_body = re.sub(r'<h3>자주 묻는 질문.*?</table>', '', cleaned_body, flags=re.DOTALL | re.IGNORECASE)
     cleaned_body = re.sub(r'<h2>자주 묻는 질문.*?</table>', '', cleaned_body, flags=re.DOTALL | re.IGNORECASE)
     article["html_body"] = cleaned_body
 
-    # 3단계. 본문 컴포넌트 추가 및 아코디언 빌드 조립 순서 엄격 조정
-    article = insert_content_image(article, slug) # 본문용 라인아트 펜아트 이미지 삽입
-    faq_html = build_faq_section_html(article, theme["accent"]) # 전용 details 아코디언 UI 생성
+    article = insert_content_image(article, slug)
+    faq_html = build_faq_section_html(article, theme["accent"])
     article["html_body"] += faq_html
 
     post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
