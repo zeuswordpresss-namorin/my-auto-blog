@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.1 - 버그 수정 및 안정화 버전)
+GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.2 - 안전 영역 최적화 및 FAQ 아코디언 버그 수정 버전)
 """
 
 import base64
@@ -69,7 +69,7 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
 5. 두괄식으로 쓴다: 첫 문단(도입부)에서 이 글이 다루는 핵심 답/결론을 먼저 요약 제시하고, 이후 문단에서 자세히 설명한다.
 6. 가독성을 위해 본문 중 최소 1곳에 <table> (수치/스펙 비교용 정리표) 또는 <ul>/<ol> 목록을 반드시 포함한다.
    단, 질문-답변(Q&A) 내용은 절대 <table>로 만들지 않는다 (표 형태는 모바일에서 깨지기 쉬움).
-   FAQPage 타입을 고른 경우, 본문에는 Q&A를 별도로 나열하지 않는다 (faq_items로 충분하며, 화면에는 별도 섹션으로 자동 표시됨).
+   FAQPage 타입을 고른 경우, 본문에는 Q&A를 별도로 나열하거나 표로 작성하지 않는다 (faq_items 스키마를 통해 아코디언 탭 섹션으로 하단에 자동 조립됨).
 7. "product_keyword"에는 이 글 내용과 실제로 관련된, 쿠팡에서 검색했을 때 진짜 상품이 나올 만한
    쇼핑 키워드(2~4단어)를 넣는다. 예: 육아 관련 글 → "신생아 용품 세트", 게임 패치 소식 → "게이밍 마우스".
    연예인 뉴스, 시사/정치, 날씨 등 상품과 자연스럽게 연결되지 않는 주제라면 억지로 만들지 말고
@@ -79,7 +79,7 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
    - "HowTo": 순서가 있는 절차/방법을 안내하는 주제일 때 (예: "~하는 법", "~ 설치 방법")
    - "Article": 위 둘에 해당하지 않는 일반 정보/추천/리뷰형 글일 때
 9. 고른 스키마 타입에 맞는 데이터를 함께 채운다:
-   - FAQPage를 골랐다면 "faq_items"에 실제 본문 내용과 일치하는 질문/답변 3~5개를 넣는다 (본문에도 자연스럽게 Q&A 형태로 녹여쓴다)
+   - FAQPage를 골랐다면 "faq_items"에 실제 본문 내용과 일치하는 질문/답변 3~5개를 넣는다.
    - HowTo를 골랐다면 "howto_steps"에 실제 본문 순서와 일치하는 단계 3~6개를 넣는다 (각 step은 name(단계 제목)과 text(설명))
    - Article이면 faq_items, howto_steps는 빈 배열로 둔다
 10. 제목/키워드를 보고 아래 카테고리 중 가장 알맞은 것 하나를 "category"에 고른다 (디자인 테마 자동 매칭용):
@@ -190,19 +190,20 @@ DEFAULT_THEME = CATEGORY_THEMES["라이프스타일"]
 def get_theme(category: str) -> dict:
     return CATEGORY_THEMES.get(category, DEFAULT_THEME)
 
+# 본문용 일러스트 프롬프트 스타일 수정 (무료 연필 펜 드로잉 선화 형식 최적화)
 ILLUSTRATION_PROMPTS = {
-    "뷰티패션": "flat vector illustration of cosmetics lipstick and fashion clothing items, minimal pastel style",
-    "푸드맛집": "flat vector illustration of food dishes and cafe coffee items, minimal pastel style",
-    "여행": "flat vector illustration of travel landscape airplane suitcase palm tree, minimal pastel style",
-    "테크IT": "flat vector illustration of laptop computer and technology icons, minimal modern style",
-    "재테크머니": "flat vector illustration of coins money and finance growth chart, minimal pastel style",
-    "헬스운동": "flat vector illustration of fitness workout dumbbell and healthy food, minimal pastel style",
-    "홈인테리어": "flat vector illustration of cozy home interior furniture and plants, minimal pastel style",
-    "대출보험": "flat vector illustration of bank building document and contract, minimal professional style",
-    "정부지원금": "flat vector illustration of government building document and checklist, minimal clean style",
-    "라이프스타일": "flat vector illustration of coffee book and cozy lifestyle items, minimal pastel style",
+    "뷰티패션": "minimalist pencil sketch style illustration of cosmetics lipstick and fashion clothing items, clean line art",
+    "푸드맛집": "minimalist pencil sketch style illustration of food dishes and cafe coffee items, clean line art",
+    "여행": "minimalist pencil sketch style illustration of travel landscape airplane suitcase palm tree, clean line art",
+    "테크IT": "minimalist pencil sketch style illustration of laptop computer and technology icons, clean modern line art",
+    "재테크머니": "minimalist pencil sketch style illustration of coins money and finance growth chart, clean line art",
+    "헬스운동": "minimalist pencil sketch style illustration of fitness workout dumbbell and healthy food, clean line art",
+    "홈인테리어": "minimalist pencil sketch style illustration of cozy home interior furniture and plants, clean line art",
+    "대출보험": "minimalist pencil sketch style illustration of bank building document and contract, clean professional line art",
+    "정부지원금": "minimalist pencil sketch style illustration of government building document and checklist, clean line art",
+    "라이프스타일": "minimalist pencil sketch style illustration of coffee book and cozy lifestyle items, clean line art",
 }
-ILLUSTRATION_SUFFIX = ", simple shapes, no text, no watermark, white background, isolated icons"
+ILLUSTRATION_SUFFIX = ", simple outline shapes, white background, isolated black or monochromatic vector lines, no watermark, no text"
 
 def build_decor_html(theme: dict, seed: str) -> str:
     rng = random.Random(seed)
@@ -267,8 +268,9 @@ def _adsense_snippet() -> str:
         f'?client={ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>'
     )
 
+# 아코디언 컴포넌트 스타일 및 아코디언 정상 노출 구조 수정
 def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
-    if article.get("schema_type") != "FAQPage" or not article.get("faq_items"):
+    if not article.get("faq_items"):
         return ""
 
     cards = []
@@ -277,17 +279,17 @@ def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
         answer = qa.get("answer", "")
         cards.append(
             f'<details style="margin:14px 0;background:#f7f8fa;border-left:4px solid {accent};'
-            'border-radius:8px;padding:2px 18px;">'
-            '<summary style="cursor:pointer;padding:14px 0;font-family:Georgia,\'Noto Serif KR\',serif;'
-            f'font-weight:800;font-size:1.08em;color:#111;">Q{i}. {question}</summary>'
+            'border-radius:8px;padding:2px 18px;" open>'
+            '<summary style="cursor:pointer;padding:14px 0;font-family:\'Noto Sans KR\',-apple-system,sans-serif;'
+            f'font-weight:800;font-size:1.08em;color:#111;outline:none;user-select:none;">Q{i}. {question}</summary>'
             '<p style="margin:0;padding:0 0 16px;font-family:\'Noto Sans KR\',-apple-system,sans-serif;'
             f'font-weight:400;color:#555;line-height:1.75;">A. {answer}</p>'
             '</details>'
         )
 
     return (
-        '<h2 style="margin-top:2em;">자주 묻는 질문 <span style="font-size:0.6em;color:#999;font-weight:400;">'
-        '(탭하면 펼쳐져요)</span></h2>'
+        '<h2 style="margin-top:2em;">자주 묻는 질문(FAQ) <span style="font-size:0.6em;color:#999;font-weight:400;">'
+        '(클릭하면 접고 펼칠 수 있습니다)</span></h2>'
         + "".join(cards)
     )
 
@@ -403,7 +405,9 @@ POST_TEMPLATE = """<!DOCTYPE html>
   h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.4em, 5vw, 1.9em); line-height: 1.35; margin: 0 0 8px; word-break: keep-all; }}
   h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }}
   p {{ margin: 1em 0; position: relative; z-index: 1; }}
-  table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; }}
+  table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; margin: 1.5em 0; }}
+  th {{ background: #f2f2f2; font-weight: 700; text-align: left; }}
+  th, td {{ padding: 10px 14px; border: 1px solid #e0e0e0; font-size: 0.93em; }}
   a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }}
   .meta {{ color: #999; font-size: 0.85em; margin-bottom: 4px; }}
   .related {{ margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }}
@@ -417,6 +421,13 @@ POST_TEMPLATE = """<!DOCTYPE html>
   .post-nav img {{ width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }}
   .post-nav .nav-icon {{ width: 28px; height: 28px; border-radius: 50%; background: {accent}; color: #fff; display:flex; align-items:center; justify-content:center; font-size: 14px; flex-shrink: 0; }}
   .post-nav span {{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+  
+  /* 아코디언 스타일 커스텀 개선 */
+  details summary::-webkit-details-marker {{ display: none; }}
+  details summary {{ display: flex; align-items: center; justify-content: space-between; }}
+  details summary::after {{ content: '▼'; font-size: 0.8em; color: {accent}; transition: transform 0.2s; }}
+  details[open] summary::after {{ content: '▲'; }}
+
   @media (max-width: 480px) {{
     .related-grid {{ grid-template-columns: 1fr 1fr; }}
     .post-nav a {{ font-size: 0.78em; flex: 1 1 100%; }}
@@ -671,7 +682,6 @@ def generate_article(title: str) -> dict:
             data = resp.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"]
             
-            # [버그 수정]: JSON 마크다운 기호 제거 후 정규식으로 순수 { } 객체만 정밀 검출
             cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
             match = re.search(r"\{.*\}", cleaned, re.DOTALL)
             if match:
@@ -769,13 +779,14 @@ def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
         lines.append(current)
     return lines
 
+# [개선 1]: 섬네일 텍스트 글자 잘림 해결 및 안전 영역 최적화 적용
 def generate_thumbnail(title: str, output_path: str, theme: dict, category: str = "라이프스타일") -> None:
     img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
 
     seed = int(hashlib.md5(title.encode("utf-8")).hexdigest(), 16) % 100000
     illustration = _fetch_illustration(category, THUMB_SIZE, seed)
     if illustration is not None:
-        img = Image.blend(img, illustration, alpha=0.10)
+        img = Image.blend(img, illustration, alpha=0.15)
 
     draw = ImageDraw.Draw(img)
     accent_rgb = _hex_to_rgb(theme["accent"])
@@ -786,7 +797,9 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     pad_x, pad_y = 26, 14
     badge_w = (lb[2] - lb[0]) + pad_x * 2
     badge_h = (lb[3] - lb[1]) + pad_y * 2
-    badge_pos = (48, 48)
+    
+    # 안정 영역 배치 (좌상단 패딩 확보)
+    badge_pos = (80, 80)
     draw.rounded_rectangle(
         [badge_pos, (badge_pos[0] + badge_w, badge_pos[1] + badge_h)],
         radius=badge_h // 2, fill=accent_rgb + (255,),
@@ -796,8 +809,9 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     bar_h = 18
     draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
 
-    max_text_width = THUMB_SIZE[1] - 100
-    max_text_height = int(THUMB_SIZE[1] * 0.55)
+    # 좌우 최소 100px의 단단한 여백(패딩) 공간 지정하여 글자 잘림 완전 원천 차단
+    max_text_width = THUMB_SIZE[0] - 200  
+    max_text_height = int(THUMB_SIZE[1] * 0.50)
 
     font_size = 72
     lines, font = [], None
@@ -819,7 +833,7 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
             last = last[:-1]
         lines[-1] = last.rstrip(".,!? ") + "..."
 
-    y = (THUMB_SIZE[1] - total_h) / 2 + 20
+    y = (THUMB_SIZE[1] - total_h) / 2 + 40
 
     for line, lh in zip(lines, heights):
         bbox = draw.textbbox((0, 0), line, font=font)
@@ -979,7 +993,6 @@ def insert_manual_ads(article: dict) -> dict:
     if not ad_html:
         return article
 
-    # [버그 수정]: 본문 중간 이미지 코드 삽입 후 첫 H2 바로 직전에 들어가도록 안전 검색
     idx = article["html_body"].find("<h2")
     if idx != -1:
         article["html_body"] = article["html_body"][:idx] + ad_html + article["html_body"][idx:]
@@ -988,8 +1001,7 @@ def insert_manual_ads(article: dict) -> dict:
     return article
 
 def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
-    base_prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"])
-    prompt = base_prompt.replace("flat vector illustration of", "photo illustration of") + ", high quality, natural lighting"
+    prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"]) + ILLUSTRATION_SUFFIX
     url = (
         f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
         f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
@@ -1005,6 +1017,7 @@ def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
         print(f"  → [본문 이미지] 생성 실패, 삽입 건너뜀: {e}")
         return None
 
+# [개선 3]: 본문 일러스트를 감성적인 선화 펜드로잉(Line Art) 스타일로 최적화 생성 및 정밀 배치
 def insert_content_image(article: dict, slug: str) -> dict:
     category = article.get("category", "라이프스타일")
     seed = int(hashlib.md5((article["title"] + "-inline").encode("utf-8")).hexdigest(), 16) % 100000
@@ -1018,9 +1031,13 @@ def insert_content_image(article: dict, slug: str) -> dict:
     photo.save(path, format="WEBP", quality=82, method=6)
 
     img_html = (
-        f'<img src="../thumbs/{filename}" alt="{article["title"]} 관련 이미지" loading="lazy" '
-        'style="width:100%;border-radius:10px;margin:20px 0;">'
+        f'<div style="text-align:center; margin:30px 0;">'
+        f'<img src="../thumbs/{filename}" alt="{article["title"]} 관련 일러스트" loading="lazy" '
+        f'style="max-width:85%; border-radius:6px; border:1px solid #eee; box-shadow:0 2px 10px rgba(0,0,0,0.03);">'
+        f'</div>'
     )
+    
+    # 첫 번째 H2 소제목이 닫힌 바로 다음 위치(소제목 아래)에 정밀하게 삽입되도록 구조 수정
     idx = article["html_body"].find("</h2>")
     if idx != -1:
         insert_at = idx + len("</h2>")
@@ -1082,7 +1099,6 @@ def _build_related_html(exclude_slug: str) -> str:
     if not posts:
         return ""
 
-    # [버그 수정]: posts/ 구조 내부에서 서빙될 때 엑박 방지를 위해 경로 앞에 ../ 추가
     cards = "\n".join(
         f'<a class="related-card" href="../{p["file"]}"><img src="../{p["thumb"]}" alt="{p["title"]}" loading="lazy">'
         f'<span>{p["title"]}</span></a>'
@@ -1090,6 +1106,7 @@ def _build_related_html(exclude_slug: str) -> str:
     )
     return f'<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid">{cards}</div></div>'
 
+# [개선 2]: AI 본문에서 발생한 중복 표를 정리하고, 아코디언 컴포넌트를 올바른 레이아웃 순서로 추가하도록 재설계
 def save_post(article: dict):
     os.makedirs(POSTS_DIR, exist_ok=True)
     os.makedirs(os.path.join(DOCS_DIR, "thumbs"), exist_ok=True)
@@ -1102,10 +1119,19 @@ def save_post(article: dict):
     thumb_filename = f"{slug}-{today}.webp"
     post_filename = f"{slug}-{today}.html"
 
+    # 1단계. 섬네일 이미지 파일 독립 생성 및 가공 (안정영역 최적화 버전)
     generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme, category)
 
-    article = insert_content_image(article, slug)
-    article["html_body"] += build_faq_section_html(article, theme["accent"])
+    # 2단계. AI가 가끔 본문 내부에 무작위 텍스트나 간이 표 형태로 집어넣는 Q&A 중복 패턴 정규식으로 안전하게 사전 제거
+    cleaned_body = article["html_body"]
+    cleaned_body = re.sub(r'<h3>자주 묻는 질문.*?</table>', '', cleaned_body, flags=re.DOTALL | re.IGNORECASE)
+    cleaned_body = re.sub(r'<h2>자주 묻는 질문.*?</table>', '', cleaned_body, flags=re.DOTALL | re.IGNORECASE)
+    article["html_body"] = cleaned_body
+
+    # 3단계. 본문 컴포넌트 추가 및 아코디언 빌드 조립 순서 엄격 조정
+    article = insert_content_image(article, slug) # 본문용 라인아트 펜아트 이미지 삽입
+    faq_html = build_faq_section_html(article, theme["accent"]) # 전용 details 아코디언 UI 생성
+    article["html_body"] += faq_html
 
     post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
     thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
@@ -1424,3 +1450,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
+
