@@ -99,7 +99,10 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
 6. 가독성을 위해 본문 중 최소 1곳에 <table> (수치/스펙 비교용 정리표) 또는 <ul>/<ol> 목록을 반드시 포함한다.
    단, 질문-답변(Q&A) 내용은 절대 <table>로 만들지 않는다 (표 형태는 모바일에서 깨지기 쉬움).
    FAQPage 타입을 고른 경우, 본문에는 Q&A를 별도로 나열하지 않는다 (faq_items로 충분하며, 화면에는 별도 섹션으로 자동 표시됨).
-7. 자연스러운 위치에 제품/서비스 추천 문맥을 1곳 만든다 (실제 링크는 넣지 않음, 나중에 자동 삽입됨).
+7. "product_keyword"에는 이 글 내용과 실제로 관련된, 쿠팡에서 검색했을 때 진짜 상품이 나올 만한
+   쇼핑 키워드(2~4단어)를 넣는다. 예: 육아 관련 글 → "신생아 용품 세트", 게임 패치 소식 → "게이밍 마우스".
+   연예인 뉴스, 시사/정치, 날씨 등 상품과 자연스럽게 연결되지 않는 주제라면 억지로 만들지 말고
+   반드시 빈 문자열("")로 둔다 (빈 문자열이면 상품 추천 섹션 자체가 생략됨).
 8. 콘텐츠 내용을 보고 아래 3가지 중 구글 상위노출에 가장 유리한 스키마 타입을 스스로 판단해서 고른다:
    - "FAQPage": 자주 묻는 질문/답변 형태로 정리하기 좋은 주제일 때 (예: "~란?", "~ 방법", "~ 차이" 등 질의응답형 검색의도)
    - "HowTo": 순서가 있는 절차/방법을 안내하는 주제일 때 (예: "~하는 법", "~ 설치 방법")
@@ -122,7 +125,8 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
   "schema_type": "Article 또는 FAQPage 또는 HowTo",
   "faq_items": [{"question": "...", "answer": "..."}],
   "howto_steps": [{"name": "...", "text": "..."}],
-  "category": "위 10개 중 하나"
+  "category": "위 10개 중 하나",
+  "product_keyword": "쇼핑 키워드 또는 빈 문자열"
 }
 html_body는 <h2>, <p>, <table>, <ul> 등을 사용한 HTML 조각이어야 한다."""
 
@@ -806,6 +810,41 @@ def _fetch_illustration(category: str, size: tuple, seed: int):
         return None
 
 
+def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
+    """폰트 종류/글자 수 추정에 의존하지 않고, 실제 렌더링 픽셀 너비를 하나씩 측정하며
+    줄바꿈합니다. 공백 단위로 먼저 시도하고, 한 단어 자체가 너무 길면 글자 단위로 쪼갭니다."""
+    words = text.split(" ")
+    lines = []
+    current = ""
+
+    def width_of(s):
+        bbox = draw.textbbox((0, 0), s, font=font)
+        return bbox[2] - bbox[0]
+
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if width_of(candidate) <= max_width or not current:
+            if width_of(candidate) <= max_width:
+                current = candidate
+                continue
+            # 단어 하나만으로도 이미 너무 긴 경우 -> 글자 단위로 강제 분할
+            chunk = ""
+            for ch in word:
+                if width_of(chunk + ch) <= max_width:
+                    chunk += ch
+                else:
+                    if chunk:
+                        lines.append(chunk)
+                    chunk = ch
+            current = chunk
+        else:
+            lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
 def generate_thumbnail(title: str, output_path: str, theme: dict, category: str = "라이프스타일") -> None:
     img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
 
@@ -836,36 +875,30 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     bar_h = 18
     draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
 
-    # --- 제목 텍스트 (길이에 따라 폰트 크기를 자동으로 줄여서 넘치지 않게 함) ---
+    # --- 제목 텍스트 (실제 픽셀 너비를 측정해서 절대 넘치지 않게 함) ---
     max_text_width = THUMB_SIZE[0] - 120  # 좌우 여백 확보
     max_text_height = THUMB_SIZE[1] - 260  # 상단 배지/하단 바 영역 제외
 
     font_size = 72
-    while font_size > 30:
+    lines, font = [], None
+    while font_size >= 28:
         font = _load_font(font_size)
-        # 폰트 크기에 맞춰 한 줄에 들어갈 글자 수를 다시 추정해서 줄바꿈
-        avg_char_w = font.getbbox("가")[2] or (font_size * 0.9)
-        wrap_width = max(4, int(max_text_width / avg_char_w))
-        lines = textwrap.wrap(title, width=wrap_width)[:3]
+        lines = _wrap_by_pixel_width(draw, title, font, max_text_width)[:3]
 
-        line_widths = [draw.textbbox((0, 0), line, font=font)[2] for line in lines]
         heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
         total_h = sum(heights) + (len(lines) - 1) * 20
+        full_wrap_count = len(_wrap_by_pixel_width(draw, title, font, max_text_width))
 
-        if max(line_widths, default=0) <= max_text_width and total_h <= max_text_height:
+        if total_h <= max_text_height and full_wrap_count <= 3:
             break
         font_size -= 4
-    else:
-        font = _load_font(30)
-        avg_char_w = font.getbbox("가")[2] or (30 * 0.9)
-        wrap_width = max(4, int(max_text_width / avg_char_w))
-        lines = textwrap.wrap(title, width=wrap_width)[:3]
-        heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
-        total_h = sum(heights) + (len(lines) - 1) * 20
 
-    # 그래도 3줄을 넘는 긴 제목은 말줄임표 처리
-    if len(textwrap.wrap(title, width=wrap_width)) > 3:
-        lines[-1] = lines[-1].rstrip(".,!? ") + "..."
+    # 3줄 안에 다 못 담으면 마지막 줄에 말줄임표 처리 (이 시점엔 각 줄 너비는 이미 폭 안에 보장됨)
+    if len(_wrap_by_pixel_width(draw, title, font, max_text_width)) > 3:
+        last = lines[-1]
+        while draw.textbbox((0, 0), last + "...", font=font)[2] > max_text_width and len(last) > 1:
+            last = last[:-1]
+        lines[-1] = last.rstrip(".,!? ") + "..."
 
     y = (THUMB_SIZE[1] - total_h) / 2 + 20
 
@@ -1068,18 +1101,22 @@ def insert_manual_ads(article: dict) -> dict:
 
 
 def add_coupang_markup(article: dict) -> dict:
-    keyword = article["keyword"]
-    search_url = f"https://www.coupang.com/np/search?q={urllib.parse.quote(keyword)}"
+    product_keyword = (article.get("product_keyword") or "").strip()
+    if not product_keyword:
+        print("  → 마크업 링크: 이 주제는 상품과 관련이 없어 추천 섹션을 생략합니다.")
+        return article
+
+    search_url = f"https://www.coupang.com/np/search?q={urllib.parse.quote(product_keyword)}"
     if COUPANG_PARTNER_TAG:
         search_url += f"&lptag={COUPANG_PARTNER_TAG}"
 
     link = _coupang_deeplink(search_url) or search_url
     link_type = "쿠팡파트너스 딥링크" if link != search_url else "일반 검색 링크"
-    print(f"  → 마크업 링크 방식: {link_type}")
+    print(f"  → 마크업 링크 방식: {link_type} (검색어: {product_keyword})")
 
     extra_html = (
         f'<h2>관련 추천 상품</h2>'
-        f'<p><a href="{link}" target="_blank" rel="nofollow sponsored">{keyword} 관련 인기 상품 보러가기</a></p>'
+        f'<p><a href="{link}" target="_blank" rel="nofollow sponsored">{product_keyword} 관련 인기 상품 보러가기</a></p>'
         '<p style="font-size:0.85em;color:#888;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, '
         '이에 따른 일정액의 수수료를 제공받습니다.</p>'
     )
@@ -1497,7 +1534,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
-
 # 기존 코드 아래에 이어서 작성하거나 전체를 교체하세요.
 
 def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_thumb_path: str) -> None:
@@ -1602,3 +1638,4 @@ if __name__ == "__main__":
     except Exception as error:
         print(f"❌ 파이프라인 실행 실패: {error}")
         sys.exit(1)
+
