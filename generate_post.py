@@ -320,9 +320,11 @@ def _adsense_snippet() -> str:
 
 def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
     """FAQPage 타입일 때, AI의 자유 서식(표 등)에 의존하지 않고 구조화된 faq_items 데이터로
-    질문/답변을 명확히 구분된 카드 형태로 직접 렌더링합니다.
-    전부 인라인 스타일(style="...")을 사용해서, <style> 태그가 제거되는 환경(예: 일부 블로거 테마)
-    에서도 레이아웃이 깨지지 않습니다."""
+    질문/답변을 클릭하면 펼쳐지는 아코디언 카드로 직접 렌더링합니다.
+    <details>/<summary>는 브라우저 네이티브 기능이라 별도 JS 없이도 클릭-확장이 동작하고,
+    전부 인라인 스타일(style="...")을 사용해서 <style> 태그가 제거되는 환경(일부 블로거 테마)
+    에서도 레이아웃이 깨지지 않습니다. 질문은 굵은 세리프 계열, 답변은 일반 산세리프로
+    폰트 종류·굵기를 다르게 줘서 시각적으로 확실히 구분됩니다."""
     if article.get("schema_type") != "FAQPage" or not article.get("faq_items"):
         return ""
 
@@ -331,15 +333,18 @@ def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
         question = qa.get("question", "")
         answer = qa.get("answer", "")
         cards.append(
-            '<div style="margin:16px 0;padding:16px 18px;background:#f7f8fa;'
-            f'border-left:4px solid {accent};border-radius:8px;">'
-            f'<p style="margin:0 0 8px;font-weight:700;color:#111;">Q{i}. {question}</p>'
-            f'<p style="margin:0;color:#444;line-height:1.7;">A. {answer}</p>'
-            '</div>'
+            f'<details style="margin:14px 0;background:#f7f8fa;border-left:4px solid {accent};'
+            'border-radius:8px;padding:2px 18px;">'
+            '<summary style="cursor:pointer;padding:14px 0;font-family:Georgia,\'Noto Serif KR\',serif;'
+            f'font-weight:800;font-size:1.08em;color:#111;">Q{i}. {question}</summary>'
+            '<p style="margin:0;padding:0 0 16px;font-family:\'Noto Sans KR\',-apple-system,sans-serif;'
+            f'font-weight:400;color:#555;line-height:1.75;">A. {answer}</p>'
+            '</details>'
         )
 
     return (
-        '<h2 style="margin-top:2em;">자주 묻는 질문</h2>'
+        '<h2 style="margin-top:2em;">자주 묻는 질문 <span style="font-size:0.6em;color:#999;font-weight:400;">'
+        '(탭하면 펼쳐져요)</span></h2>'
         + "".join(cards)
     )
 
@@ -876,8 +881,14 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
 
     # --- 제목 텍스트 (실제 픽셀 너비를 측정해서 절대 넘치지 않게 함) ---
-    max_text_width = THUMB_SIZE[0] - 120  # 좌우 여백 확보
-    max_text_height = THUMB_SIZE[1] - 260  # 상단 배지/하단 바 영역 제외
+    # 블로거 "추천 가젯", 네이버 인앱브라우저 등 외부 위젯은 16:9 원본 이미지를
+    # 정사각형에 가깝게 잘라서 보여주는 경우가 많습니다. 어떤 비율로 잘려도 제목이
+    # 안 잘리도록, 텍스트는 이미지 중앙 65% 폭 안에만 배치합니다 (title-safe area).
+    # 블로거 "추천 가젯", 네이버 인앱브라우저 등 외부 위젯은 16:9 원본 이미지를
+    # 정사각형(가로=세로)에 가깝게 잘라서 보여주는 경우가 많습니다. 그 최악의 경우(정사각형
+    # 크롭)에도 텍스트가 안 잘리려면, 폭 제한은 "이미지 높이"를 기준으로 잡아야 합니다.
+    max_text_width = THUMB_SIZE[1] - 100  # 정사각형 크롭 폭(=720) 대비 여유
+    max_text_height = int(THUMB_SIZE[1] * 0.55)
 
     font_size = 72
     lines, font = [], None
@@ -1100,6 +1111,53 @@ def insert_manual_ads(article: dict) -> dict:
     return article
 
 
+def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
+    """본문 중간에 들어갈 주제 관련 이미지를 무료로 가져옵니다 (Pollinations.ai, 키 불필요).
+    썸네일의 아이콘풍 일러스트와 다르게, 좀 더 사진/장면에 가까운 분위기로 요청합니다."""
+    base_prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"])
+    prompt = base_prompt.replace("flat vector illustration of", "photo illustration of") + ", high quality, natural lighting"
+    url = (
+        f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
+        f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
+    )
+    try:
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+        if img.size != size:
+            img = img.resize(size)
+        return img
+    except Exception as e:
+        print(f"  → [본문 이미지] 생성 실패, 삽입 건너뜀: {e}")
+        return None
+
+
+def insert_content_image(article: dict, slug: str) -> dict:
+    """본문 첫 소제목(H2) 바로 뒤에 주제와 관련된 실제 무료 이미지를 1장 삽입합니다."""
+    category = article.get("category", "라이프스타일")
+    seed = int(hashlib.md5((article["title"] + "-inline").encode("utf-8")).hexdigest(), 16) % 100000
+    photo = _fetch_content_photo(category, seed)
+    if photo is None:
+        return article
+
+    filename = f"{slug}-inline.webp"
+    path = os.path.join(DOCS_DIR, "thumbs", filename)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    photo.save(path, format="WEBP", quality=82, method=6)
+
+    img_html = (
+        f'<img src="../thumbs/{filename}" alt="{article["title"]} 관련 이미지" loading="lazy" '
+        'style="width:100%;border-radius:10px;margin:20px 0;">'
+    )
+    idx = article["html_body"].find("</h2>")
+    if idx != -1:
+        insert_at = idx + len("</h2>")
+        article["html_body"] = article["html_body"][:insert_at] + img_html + article["html_body"][insert_at:]
+    else:
+        article["html_body"] = img_html + article["html_body"]
+    return article
+
+
 def add_coupang_markup(article: dict) -> dict:
     product_keyword = (article.get("product_keyword") or "").strip()
     if not product_keyword:
@@ -1179,6 +1237,9 @@ def save_post(article: dict):
     post_filename = f"{slug}-{today}.html"
 
     generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme, category)
+
+    # 본문 중간에 주제 관련 실제 이미지 삽입 (실패해도 조용히 건너뜀)
+    article = insert_content_image(article, slug)
 
     # FAQ 섹션을 구조화된 데이터로 직접 렌더링해서 html_body에 병합
     # (article 딕셔너리를 직접 수정하므로, 이후 블로거 발행 시에도 동일하게 반영됨)
@@ -1442,8 +1503,9 @@ def _make_blogger_safe_html(html_body: str) -> str:
         html_body = html_body.replace('href="../thumbs/', f'href="{SITE_URL}/thumbs/')
         html_body = html_body.replace('src="../thumbs/', f'src="{SITE_URL}/thumbs/')
     else:
-        # SITE_URL이 없으면 절대경로를 만들 수 없으니, 깨진 링크 대신 일반 텍스트로 되돌립니다.
+        # SITE_URL이 없으면 절대경로를 만들 수 없으니, 깨진 링크/이미지를 만들지 않도록 제거합니다.
         html_body = re.sub(r'<a href="\.\./(posts|thumbs)/[^"]*"[^>]*>(.*?)</a>', r"\2", html_body)
+        html_body = re.sub(r'<img src="\.\./thumbs/[^"]*"[^>]*>', "", html_body)
     return html_body
 
 
