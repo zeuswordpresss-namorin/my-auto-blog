@@ -38,13 +38,21 @@ def extract_old_content(html: str):
     )
     html_body = body_m.group(1).strip() if body_m else ""
 
-    # FAQ 카드가 있으면 질문/답변 쌍까지 다시 추출해서 구조화 스키마(FAQPage)를 완전히 복원
+    # FAQ 아코디언(details/summary)이 있으면 질문/답변 쌍을 다시 추출해서 구조화 스키마 복원
     faq_items = [
         {"question": q.strip(), "answer": a.strip()}
         for q, a in re.findall(
-            r'>Q\d+\.\s*(.*?)</p><p[^>]*>A\.\s*(.*?)</p>', html_body, re.S,
+            r'<summary[^>]*>Q\d+\.\s*(.*?)</summary>\s*<p[^>]*>A\.\s*(.*?)</p>', html_body, re.S,
         )
     ]
+    if not faq_items:
+        # 예전(구버전) 카드형 FAQ 구조도 대비 (하위 호환)
+        faq_items = [
+            {"question": q.strip(), "answer": a.strip()}
+            for q, a in re.findall(
+                r'>Q\d+\.\s*(.*?)</p><p[^>]*>A\.\s*(.*?)</p>', html_body, re.S,
+            )
+        ]
     schema_type = "FAQPage" if faq_items else "Article"
     return title, meta_description, html_body, schema_type, faq_items
 
@@ -142,3 +150,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+
