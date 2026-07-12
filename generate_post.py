@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v5 - 고도화판)
-
-v4 기반에서 기존 기능을 완전히 유지하며 아래 사항을 보완/추가함:
-  1. Gemini JSON 파싱 안정성 극대화 (정규식을 활용한 유연한 텍스트 추출 가공)
-  2. Pollinations AI 이미지 생성 타임아웃 및 재시도 로직 강화
-  3. 구글 블로거 에러 로그 상세화 (디버깅 편의성 제공)
-  4. 모바일 UI/UX 가독성 향상을 위한 스타일 가이드 미세 조정
+GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v5.1 - JSON 파싱 제어문자 버그 수정판)
 """
 
 import base64
@@ -647,11 +641,15 @@ def get_title_from_args_or_queue() -> str:
 
 def extract_pure_json(text: str) -> str:
     """Gemini 마크다운 기호 블록이나 불필요한 앞뒤 텍스트가 섞여 있어도
-    첫 번째 완결형 JSON object만 유연하게 추출합니다."""
+    첫 번째 완결형 JSON object만 유연하게 추출하고 유효하지 않은 제어문자를 필터링합니다."""
     text_clean = text.strip()
     match = re.search(r"(\{.*\})", text_clean, re.DOTALL)
     if match:
-        return match.group(1).strip()
+        json_candidate = match.group(1).strip()
+        # JSON 문자열 내부에서 에러를 유발하는 제어 문자(00~1F 영역 중 \t, \n 등 제외 혹은 전체)를 방어
+        # 파이썬 re를 이용해 유효하지 않은 raw 제어문자들을 제거하거나 치환
+        json_candidate = re.sub(r"[\x00-\x1F\x7F]", lambda m: "\\n" if m.group() in ("\n", "\r") else ("\\t" if m.group() == "\t" else ""), json_candidate)
+        return json_candidate
     return text_clean
 
 def generate_article(title: str) -> dict:
@@ -666,6 +664,7 @@ def generate_article(title: str) -> dict:
 
     last_error = None
     for attempt in range(1, 4):
+        text = ""
         try:
             resp = requests.post(url, json=payload, timeout=60)
             if resp.status_code in (429, 503):
@@ -693,7 +692,7 @@ def generate_article(title: str) -> dict:
         except (KeyError, IndexError) as e:
             raise ValueError(f"Gemini 응답 형식이 예상과 다릅니다: {e}")
         except json.JSONDecodeError as e:
-            raise ValueError(f"AI 응답을 JSON으로 해석하지 못했습니다: {e}. 응답 텍스트 원본: {text[:200]}...")
+            raise ValueError(f"AI 응답을 JSON으로 해석하지 못했습니다: {e}. 응답 텍스트 원본 일부: {text[:300]}...")
         except requests.exceptions.RequestException as e:
             last_error = str(e)
             time.sleep(10)
@@ -1441,3 +1440,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
+
