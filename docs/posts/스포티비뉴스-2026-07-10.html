@@ -69,28 +69,61 @@
 </script>
 <style>
   * { box-sizing: border-box; }
-  body { position: relative; max-width: 720px; margin: 0 auto; padding: 0 20px 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.75; color: #1a1a1a; background: #fafafa; overflow-x: hidden; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { position: relative; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 20px) 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; line-height: 1.75; color: #1a1a1a; background: #fafafa; overflow-x: hidden; }
+  img { max-width: 100%; height: auto; }
   .decor-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
   .decor-item { position: absolute; filter: grayscale(0%); user-select: none; }
   .content { position: relative; z-index: 1; }
   .hero { margin: 0 -20px 24px; position: relative; }
   .hero img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
-  .badge { display: inline-block; background: #4a90d9; color: #fff; font-size: 0.8em; font-weight: 700; padding: 5px 14px; border-radius: 999px; margin: 20px 0 10px; }
-  h1 { font-family: 'Noto Sans KR', 'Noto Sans KR', sans-serif; font-size: 1.9em; line-height: 1.35; margin: 0 0 8px; }
-  h2 { font-family: 'Noto Sans KR', 'Noto Sans KR', sans-serif; font-size: 1.35em; margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, #4a90d922, transparent); border-left: 5px solid #4a90d9; border-radius: 4px; position: relative; z-index: 1; }
+  .badge { display: inline-block; background: #4a90d9; color: #fff; font-size: clamp(0.75em, 2.2vw, 0.85em); font-weight: 700; padding: 5px 14px; border-radius: 999px; margin: 20px 0 10px; }
+  h1 { font-family: 'Noto Sans KR', 'Noto Sans KR', sans-serif; font-size: clamp(1.4em, 5vw, 1.9em); line-height: 1.35; margin: 0 0 8px; word-break: keep-all; }
+  h2 { font-family: 'Noto Sans KR', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, #4a90d922, transparent); border-left: 5px solid #4a90d9; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }
   p { margin: 1em 0; position: relative; z-index: 1; }
+  table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; }
   a.back { display: inline-block; margin: 20px 0; color: #4a90d9; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }
   .meta { color: #999; font-size: 0.85em; margin-bottom: 4px; }
   .related { margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }
   .related h3 { font-size: 1.1em; margin-bottom: 14px; }
-  .related-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
   .related-card { text-decoration: none; color: #1a1a1a; }
   .related-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; margin-bottom: 6px; }
   .related-card span { font-size: 0.88em; font-weight: 500; }
+  .post-nav { display: flex; justify-content: space-between; gap: 10px; margin: 30px 0; flex-wrap: wrap; }
+  .post-nav a { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #333; background: #fff; border: 1px solid #eee; border-radius: 999px; padding: 6px 16px 6px 6px; font-size: 0.85em; max-width: 100%; }
+  .post-nav img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  .post-nav .nav-icon { width: 28px; height: 28px; border-radius: 50%; background: #4a90d9; color: #fff; display:flex; align-items:center; justify-content:center; font-size: 14px; flex-shrink: 0; }
+  .post-nav span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 480px) {
+    .related-grid { grid-template-columns: 1fr 1fr; }
+    .post-nav a { font-size: 0.78em; flex: 1 1 100%; }
+  }
+  @media (min-width: 900px) {
+    body { max-width: 760px; }
+  }
+  .translate-widget { position: fixed; top: 10px; right: 10px; z-index: 999; font-size: 0.8em; }
+  body { top: 0 !important; }
+  .goog-te-banner-frame { display: none !important; }
+</style>
 </style>
 </head>
 <body>
-<div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:59%;left:79%;font-size:55px;opacity:0.12;transform:rotate(10deg);">☕</span><span class="decor-item" style="top:69%;left:56%;font-size:38px;opacity:0.11;transform:rotate(10deg);">✨</span><span class="decor-item" style="top:86%;left:28%;font-size:54px;opacity:0.09;transform:rotate(1deg);">📓</span><span class="decor-item" style="top:68%;left:10%;font-size:32px;opacity:0.16;transform:rotate(-14deg);">🌸</span><span class="decor-item" style="top:87%;left:61%;font-size:36px;opacity:0.14;transform:rotate(-28deg);">🕊️</span><span class="decor-item" style="top:63%;left:22%;font-size:32px;opacity:0.09;transform:rotate(3deg);">🕊️</span><span class="decor-item" style="top:12%;left:56%;font-size:28px;opacity:0.11;transform:rotate(15deg);">🌿</span><span class="decor-item" style="top:87%;left:13%;font-size:33px;opacity:0.15;transform:rotate(6deg);">🕊️</span><span class="decor-item" style="top:5%;left:58%;font-size:52px;opacity:0.1;transform:rotate(11deg);">🌿</span></div>
+
+<div style="position:fixed;top:10px;right:10px;z-index:999;">
+  <button onclick="var e=document.getElementById('gt-box');e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none';"
+    style="width:38px;height:38px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:17px;cursor:pointer;line-height:1;">🌐</button>
+  <div id="gt-box" style="display:none;margin-top:6px;background:#fff;padding:6px 8px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.18);">
+    <div id="google_translate_element"></div>
+  </div>
+</div>
+<script>
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({pageLanguage: 'ko', autoDisplay: false}, 'google_translate_element');
+}
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:20%;left:32%;font-size:34px;opacity:0.15;transform:rotate(-14deg);">🌿</span><span class="decor-item" style="top:0%;left:22%;font-size:42px;opacity:0.14;transform:rotate(-23deg);">🕊️</span><span class="decor-item" style="top:39%;left:82%;font-size:28px;opacity:0.12;transform:rotate(-21deg);">✨</span><span class="decor-item" style="top:15%;left:77%;font-size:37px;opacity:0.14;transform:rotate(-22deg);">🕊️</span><span class="decor-item" style="top:56%;left:6%;font-size:41px;opacity:0.11;transform:rotate(-29deg);">🌸</span><span class="decor-item" style="top:24%;left:2%;font-size:38px;opacity:0.08;transform:rotate(18deg);">⭐</span><span class="decor-item" style="top:28%;left:31%;font-size:31px;opacity:0.16;transform:rotate(12deg);">⭐</span><span class="decor-item" style="top:16%;left:73%;font-size:31px;opacity:0.11;transform:rotate(-13deg);">🕊️</span><span class="decor-item" style="top:81%;left:36%;font-size:40px;opacity:0.14;transform:rotate(6deg);">☕</span><span class="decor-item" style="top:9%;left:15%;font-size:29px;opacity:0.13;transform:rotate(22deg);">✨</span><span class="decor-item" style="top:1%;left:22%;font-size:56px;opacity:0.09;transform:rotate(9deg);">✨</span><span class="decor-item" style="top:78%;left:6%;font-size:44px;opacity:0.13;transform:rotate(-27deg);">✨</span></div>
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
 <div class="hero"><img src="../thumbs/스포티비뉴스-2026-07-10.webp" alt="스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁" loading="eager" fetchpriority="high"></div>
@@ -136,9 +169,10 @@
 
 <h2>스포티비뉴스와 함께 즐기는 미디어 경험</h2>
 <p>스포티비뉴스는 스포츠와 연예 분야의 최신 정보를 갈망하는 독자들에게 없어서는 안 될 중요한 미디어 플랫폼으로 자리매김했습니다. 빠르고 정확한 속보, 깊이 있는 분석, 그리고 생생한 영상 콘텐츠까지 아우르며 독자들의 정보 갈증을 해소해 줍니다. 오늘부터 스포티비뉴스를 적극적으로 활용하여 여러분의 관심사를 풍요롭게 채우고, 변화하는 세상의 흐름을 놓치지 않는 현명한 미디어 소비자가 되어보시길 바랍니다. 언제나 최신 정보는 공식 웹사이트나 앱을 통해 확인하는 것이 가장 정확합니다.</p><p>🔗 이 글도 많이 찾아보세요: <a href="../posts/제철-과일-2026-07-10.html">사계절 제철 과일 종류별 효능 및 신선하게 고르는 법</a></p><h2>관련 추천 상품</h2><p><a href="https://www.coupang.com/np/search?q=%EC%8A%A4%ED%8F%AC%ED%8B%B0%EB%B9%84%EB%89%B4%EC%8A%A4" target="_blank" rel="nofollow sponsored">스포티비뉴스 관련 인기 상품 보러가기</a></p><p style="font-size:0.85em;color:#888;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/제철-과일-2026-07-10.html"><img src="../thumbs/제철-과일-2026-07-10.webp" alt="사계절 제철 과일 종류별 효능 및 신선하게 고르는 법" loading="lazy"><span>사계절 제철 과일 종류별 효능 및 신선하게 고르는 법</span></a>
-<a class="related-card" href="../posts/인테리어-소품-2026-07-10.html"><img src="../thumbs/인테리어-소품-2026-07-10.webp" alt="작은 변화, 큰 효과! 인테리어 소품 활용 팁과 종류" loading="lazy"><span>작은 변화, 큰 효과! 인테리어 소품 활용 팁과 종류</span></a>
-<a class="related-card" href="../posts/무선-이어폰-비교-2026-07-10.html"><img src="../thumbs/무선-이어폰-비교-2026-07-10.webp" alt="인기 무선 이어폰 비교 구매 가이드: 나에게 맞는 모델 찾기" loading="lazy"><span>인기 무선 이어폰 비교 구매 가이드: 나에게 맞는 모델 찾기</span></a></div></div>
+<div class="post-nav"><a href="../posts/프랑스-스페인-2026-07-12.html"><img src="../thumbs/프랑스-스페인-2026-07-12.webp" alt="이전 게시물"><span>← 이전 게시물: 프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
+<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/프랑스-스페인-2026-07-12.html"><img src="../thumbs/프랑스-스페인-2026-07-12.webp" alt="프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험" loading="lazy"><span>프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험</span></a>
+<a class="related-card" href="../posts/목감천-2026-07-12.html"><img src="../thumbs/목감천-2026-07-12.webp" alt="목감천 산책 코스 자전거 라이딩 명소 추천" loading="lazy"><span>목감천 산책 코스 자전거 라이딩 명소 추천</span></a>
+<a class="related-card" href="../posts/하이브리드-차량-2026-07-11.html"><img src="../thumbs/하이브리드-차량-2026-07-11.webp" alt="하이브리드 차량 구매 전 고려사항: 원리, 종류, 장점 비교" loading="lazy"><span>하이브리드 차량 구매 전 고려사항: 원리, 종류, 장점 비교</span></a></div></div>
 
 </div>
 </body>
