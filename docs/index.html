@@ -1,110 +1,223 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>자동 생성 프로세스가 제어하는 스마트 홈 기기</title>
-    <style>
-        *, *::before, *::after { box-sizing: border-box; }
-        body {
-            margin: 0; padding: 20px; background-color: #f8f9fa; color: #333;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-        .wrapper {
-            max-width: 650px; margin: 0 auto; background: #ffffff;
-            padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        h1 { font-size: 1.4rem; margin-top: 0; color: #111; line-height: 1.4; }
-        .player-interface {
-            display: flex; align-items: center; background: #e9ecef;
-            padding: 12px 18px; border-radius: 30px; margin: 20px 0;
-        }
-        .toggle-control-btn {
-            width: 48px; height: 48px; background-color: #007bff; border: none;
-            color: #ffffff; border-radius: 50%; cursor: pointer; font-size: 16px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 3px 6px rgba(0,123,255,0.2);
-            transition: all 0.2s; -webkit-tap-highlight-color: transparent;
-        }
-        .player-status-block { margin-left: 15px; }
-        .main-status-label { margin: 0; font-size: 14px; font-weight: 600; color: #212529; }
-        .sub-status-label { margin: 0; font-size: 11px; color: #868e96; margin-top: 2px; }
-        .text-content-area { font-size: 16px; line-height: 1.8; color: #495057; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>namorin</title>
+<meta name="description" content="namorin - 자동으로 업데이트되는 블로그">
+<link rel="canonical" href="https://zeuswordpresss-namorin.github.io/my-auto-blog/">
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="google-site-verification" content="auc2lfF_opd5ncVXjhWjDfy94HqMLCrYzU-Sgb8-Jg4">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&family=Noto+Sans+KR:wght@700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "namorin",
+  "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/",
+  "blogPost": [
+    {
+      "@type": "BlogPosting",
+      "headline": "T1 구마유시 이민형 선수 프로필 및 활약상 총정리",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/구마유시-2026-07-13.html",
+      "datePublished": "2026-07-13",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/구마유시-2026-07-13.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "통화 스와프 뜻 필요성 금융시장 영향 자세히 알아보기",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/통화-스와프-2026-07-13.html",
+      "datePublished": "2026-07-13",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/통화-스와프-2026-07-13.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "유병재 독보적 유머와 작가 정신: 끊임없이 진화하는 엔터테이너",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/유병재-2026-07-13.html",
+      "datePublished": "2026-07-13",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/유병재-2026-07-13.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "롯데그룹 역사와 주요 사업, 핵심 계열사 총정리",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/롯데그룹-2026-07-13.html",
+      "datePublished": "2026-07-13",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/롯데그룹-2026-07-13.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "축구 감독의 역할과 자격 요건, 성공적인 지도자 되는 길",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/축구-감독-2026-07-12.html",
+      "datePublished": "2026-07-12",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/축구-감독-2026-07-12.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "엘링 홀란드: 맨시티 득점 기계의 압도적 활약과 커리어",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/엘링-홀란드-2026-07-12.html",
+      "datePublished": "2026-07-12",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/엘링-홀란드-2026-07-12.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/월드컵-결과-2026-07-12.html",
+      "datePublished": "2026-07-12",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/월드컵-결과-2026-07-12.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/fifa-world-cup-2026-2026-07-12.html",
+      "datePublished": "2026-07-12",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/fifa-world-cup-2026-2026-07-12.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "충남 당진 가볼만한곳 추천, 서해안 숨은 명소 여행 코스",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/당진시-2026-07-12.html",
+      "datePublished": "2026-07-12",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/당진시-2026-07-12.webp"
+    },
+    {
+      "@type": "BlogPosting",
+      "headline": "아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고",
+      "url": "https://zeuswordpresss-namorin.github.io/my-auto-blog/posts/argentina-vs-switzerland-2026-07-12.html",
+      "datePublished": "2026-07-12",
+      "image": "https://zeuswordpresss-namorin.github.io/my-auto-blog/thumbs/argentina-vs-switzerland-2026-07-12.webp"
+    }
+  ]
+}
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LES0V0R88T"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-LES0V0R88T');
+</script>
+<style>
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { max-width: 1000px; margin: 0 auto; padding: 0 0 60px; font-family: 'Noto Sans KR', -apple-system, sans-serif; background:#f5f5f7; color:#1a1a1a; }
+  img { max-width: 100%; height: auto; }
+  .masthead { position: relative; margin-bottom: 26px; }
+  .masthead img { width: 100%; aspect-ratio: 1600/420; object-fit: cover; display:block; }
+  .masthead-inner { padding: 0 clamp(14px, 4vw, 20px); }
+  .brand-row { display:flex; align-items:center; gap:12px; margin: 18px 0 4px; flex-wrap: wrap; }
+  .brand-row img.logo { width:44px; height:44px; border-radius:50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  h1.site-title { font-family: 'Jua', sans-serif; font-size: clamp(1.2em, 4.5vw, 1.6em); margin:0; word-break: keep-all; }
+  .dash-link { margin-left:auto; font-size: clamp(0.7em, 2.5vw, 0.75em); color:#888; text-decoration:none; background:#eee; padding:6px 14px; border-radius:999px; }
+  .intro { color:#555; font-size:0.95em; margin: 4px 0 16px; line-height:1.6; word-break: keep-all; }
+  .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 10px; }
+  .pill { font-size:0.78em; font-weight:700; color:#fff; padding:5px 13px; border-radius:999px; }
+  .content-wrap { padding: 0 clamp(14px, 4vw, 20px); }
+  .tier-label { font-size: 0.85em; font-weight:900; color:#aaa; letter-spacing:2px; margin: 34px 0 12px; text-transform:uppercase; }
+  .tier-label:first-of-type { margin-top: 10px; }
+
+  /* 상단(TOP) - 히어로 1건, 가장 큰 임팩트 */
+  .hero { display:block; text-decoration:none; color:#1a1a1a; background:#fff; border-radius:20px; overflow:hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.10); }
+  .hero img { width:100%; aspect-ratio: 21/9; object-fit:cover; display:block; }
+  .hero-body { padding: clamp(16px, 4vw, 22px) clamp(18px, 5vw, 26px) 28px; }
+  .hero-badge { display:inline-block; font-size:0.8em; font-weight:700; color:#fff; padding:5px 14px; border-radius:999px; margin-bottom:12px; }
+  .hero-title { font-size: clamp(1.25em, 4.5vw, 1.7em); font-weight:800; line-height:1.35; word-break: keep-all; }
+
+  /* 중단(MID) - 2단 그리드, 중간 크기 */
+  .mid-grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  .mid-card { text-decoration:none; color:#1a1a1a; background:#fff; border-radius:16px; overflow:hidden; box-shadow: 0 3px 14px rgba(0,0,0,0.08); transition: transform .15s ease; }
+  .mid-card:hover { transform: translateY(-3px); }
+  .mid-card img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
+  .mid-body { padding: 14px 16px 18px; }
+  .mid-title { font-weight:700; font-size:clamp(0.92em, 3vw, 1.08em); line-height:1.4; word-break: keep-all; }
+
+  /* 하단(BOTTOM) - 촘촘한 아카이브 그리드, 작은 크기 */
+  .bottom-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:14px; }
+  .bottom-card { text-decoration:none; color:#1a1a1a; background:#fff; border-radius:10px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .bottom-card img { width:100%; aspect-ratio:16/10; object-fit:cover; display:block; }
+  .bottom-body { padding: 8px 10px 12px; }
+  .bottom-title { font-weight:600; font-size:0.85em; line-height:1.35; word-break: keep-all; }
+
+  .badge-sm { display:inline-block; font-size:0.65em; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:5px; }
+  .date { color: #999; font-size: 0.78em; margin-top: 5px; }
+  .site-footer { margin-top: 50px; padding: 24px 20px; border-top: 1px solid #e2e2e2; text-align:center; color:#999; font-size:0.82em; }
+  .site-footer a { color:#777; text-decoration:none; margin: 0 8px; }
+  .site-footer a:hover { color:#b45309; }
+
+  @media (max-width: 480px) {
+    .masthead img { aspect-ratio: 1600/620; }
+    .hero img { aspect-ratio: 16/9; }
+    .mid-grid { grid-template-columns: 1fr; gap: 14px; }
+    .bottom-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1000px) {
+    .bottom-grid { grid-template-columns: repeat(5, 1fr); }
+  }
+  .translate-widget { position: fixed; top: 10px; right: 10px; z-index: 999; font-size: 0.8em; }
+  body { top: 0 !important; }
+  .goog-te-banner-frame { display: none !important; }
+</style>
 </head>
 <body>
 
-    <!-- 모바일 및 웹 터치 최적화 오디오 플레이어 UI 주입 시작 -->
-    <div class="player-interface" style="
-        display: flex; align-items: center; background: #e9ecef;
-        padding: 12px 18px; border-radius: 30px; margin: 20px 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    ">
-        <button id="ui-ctrl-btn" class="toggle-control-btn" onclick="triggerAudioStream()" style="
-            width: 48px; height: 48px; background-color: #007bff; border: none;
-            color: #ffffff; border-radius: 50%; cursor: pointer; font-size: 16px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 3px 6px rgba(0,123,255,0.2);
-            transition: all 0.2s; -webkit-tap-highlight-color: transparent;
-        ">▶</button>
-        <div class="player-status-block" style="margin-left: 15px; text-align: left;">
-            <p id="ui-status-text" class="main-status-label" style="margin: 0; font-size: 14px; font-weight: 600; color: #212529;">아나운서 리딩 듣기</p>
-            <p class="sub-status-label" style="margin: 0; font-size: 11px; color: #868e96; margin-top: 2px;">버튼을 터치하여 음성을 켜고 끌 수 있습니다. (ON/OFF)</p>
-        </div>
-    </div>
-    <audio id="core-audio-engine" src="./announcer_reading.mp3"></audio>
-    
-    <script>
-    function triggerAudioStream() {
-        const audio = document.getElementById('core-audio-engine');
-        const btn = document.getElementById('ui-ctrl-btn');
-        const txt = document.getElementById('ui-status-text');
-        if (audio.paused) {
-            audio.play(); btn.innerHTML = '⏸'; btn.style.backgroundColor = '#dc3545';
-            txt.innerText = '아나운서 음성 리딩 중...';
-        } else {
-            audio.pause(); btn.innerHTML = '▶'; btn.style.backgroundColor = '#007bff';
-            txt.innerText = '아나운서 리딩 일시정지';
-        }
-    }
-    document.getElementById('core-audio-engine').addEventListener('ended', function() {
-        document.getElementById('ui-ctrl-btn').innerHTML = '▶';
-        document.getElementById('ui-ctrl-btn').style.backgroundColor = '#007bff';
-        document.getElementById('ui-status-text').innerText = '아나운서 리딩 듣기';
-    });
-    </script>
-    <!-- 모바일 및 웹 터치 최적화 오디오 플레이어 UI 주입 끝 -->
-    
-<div class="wrapper">
-    <h1>자동 생성 프로세스가 제어하는 스마트 홈 기기</h1>
-    <div class="player-interface">
-        <button id="ui-ctrl-btn" class="toggle-control-btn" onclick="triggerAudioStream()">▶</button>
-        <div class="player-status-block">
-            <p id="ui-status-text" class="main-status-label">아나운서 리딩 듣기</p>
-            <p class="sub-status-label">버튼을 터치하여 음성을 켜고 끌 수 있습니다. (ON/OFF)</p>
-        </div>
-    </div>
-    <audio id="core-audio-engine" src="./announcer_reading.mp3"></audio>
-    <div class="text-content-area"><p>안녕하세요. 오늘 generate 로직을 통해 추출된 문장 기반 포스팅입니다. 무선 네트워크와 연동된 스마트 가전은 우리의 삶을 더욱 풍요롭게 만들어 줍니다.</p></div>
+<div style="position:fixed;top:10px;right:10px;z-index:999;">
+  <button onclick="var e=document.getElementById('gt-box');e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none';"
+    style="width:38px;height:38px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:17px;cursor:pointer;line-height:1;">🌐</button>
+  <div id="gt-box" style="display:none;margin-top:6px;background:#fff;padding:6px 8px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.18);">
+    <div id="google_translate_element"></div>
+  </div>
 </div>
 <script>
-function triggerAudioStream() {
-    const audio = document.getElementById('core-audio-engine');
-    const btn = document.getElementById('ui-ctrl-btn');
-    const txt = document.getElementById('ui-status-text');
-    if (audio.paused) {
-        audio.play(); btn.innerHTML = '⏸'; btn.style.backgroundColor = '#dc3545';
-        txt.innerText = '아나운서 음성 리딩 중...';
-    } else {
-        audio.pause(); btn.innerHTML = '▶'; btn.style.backgroundColor = '#007bff';
-        txt.innerText = '아나운서 리딩 일시정지';
-    }
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({pageLanguage: 'ko', autoDisplay: false}, 'google_translate_element');
 }
-document.getElementById('core-audio-engine').addEventListener('ended', function() {
-    document.getElementById('ui-ctrl-btn').innerHTML = '▶';
-    document.getElementById('ui-ctrl-btn').style.backgroundColor = '#007bff';
-    document.getElementById('ui-status-text').innerText = '아나운서 리딩 듣기';
-});
 </script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<div class="masthead">
+  <img src="banner.webp" alt="namorin" loading="eager" fetchpriority="high">
+</div>
+<div class="masthead-inner">
+  <div class="brand-row">
+    <img class="logo" src="logo.webp" alt="namorin 로고">
+    <h1 class="site-title">namorin</h1>
+    <a class="dash-link" href="dashboard.html">📊 성과관리</a>
+  </div>
+  <p class="intro">namorin | 구글 트렌드와 주간 인기 검색어 정보</p>
+  <div class="pill-row"><span class="pill" style="background:#ff6b9d">💄 뷰티·패션</span><span class="pill" style="background:#ff6b35">🍽️ 푸드·맛집</span><span class="pill" style="background:#11998e">✈️ 여행</span><span class="pill" style="background:#2a5298">💻 테크·IT</span><span class="pill" style="background:#11694f">💰 재테크</span><span class="pill" style="background:#134e5e">💪 헬스·운동</span><span class="pill" style="background:#c48458">🏠 홈·인테리어</span><span class="pill" style="background:#4a90d9">✨ 라이프스타일</span><span class="pill" style="background:#1e3a5f">🏦 대출·보험</span><span class="pill" style="background:#00695c">🏛️ 정부지원금</span></div>
+</div>
+
+<div class="content-wrap">
+<div class="tier-label">🔥 최신 이야기</div><a class="hero" href="posts/구마유시-2026-07-13.html"><img src="thumbs/구마유시-2026-07-13.webp" alt="T1 구마유시 이민형 선수 프로필 및 활약상 총정리" loading="eager" fetchpriority="high"><div class="hero-body"><span class="hero-badge" style="background:#2a5298">💻 테크·IT</span><div class="hero-title">T1 구마유시 이민형 선수 프로필 및 활약상 총정리</div><div class="date">2026-07-13</div></div></a>
+<div class="tier-label">📖 다음 이야기</div><div class="mid-grid"><a class="mid-card" href="posts/통화-스와프-2026-07-13.html"><img src="thumbs/통화-스와프-2026-07-13.webp" alt="통화 스와프 뜻 필요성 금융시장 영향 자세히 알아보기" loading="lazy"><div class="mid-body"><span class="badge-sm" style="background:#11694f">💰 재테크</span><div class="mid-title">통화 스와프 뜻 필요성 금융시장 영향 자세히 알아보기</div><div class="date">2026-07-13</div></div></a>
+<a class="mid-card" href="posts/유병재-2026-07-13.html"><img src="thumbs/유병재-2026-07-13.webp" alt="유병재 독보적 유머와 작가 정신: 끊임없이 진화하는 엔터테이너" loading="lazy"><div class="mid-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="mid-title">유병재 독보적 유머와 작가 정신: 끊임없이 진화하는 엔터테이너</div><div class="date">2026-07-13</div></div></a></div>
+<div class="tier-label">🗂️ 지난 글 모아보기</div><div class="bottom-grid"><a class="bottom-card" href="posts/롯데그룹-2026-07-13.html"><img src="thumbs/롯데그룹-2026-07-13.webp" alt="롯데그룹 역사와 주요 사업, 핵심 계열사 총정리" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">롯데그룹 역사와 주요 사업, 핵심 계열사 총정리</div></div></a>
+<a class="bottom-card" href="posts/축구-감독-2026-07-12.html"><img src="thumbs/축구-감독-2026-07-12.webp" alt="축구 감독의 역할과 자격 요건, 성공적인 지도자 되는 길" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">축구 감독의 역할과 자격 요건, 성공적인 지도자 되는 길</div></div></a>
+<a class="bottom-card" href="posts/엘링-홀란드-2026-07-12.html"><img src="thumbs/엘링-홀란드-2026-07-12.webp" alt="엘링 홀란드: 맨시티 득점 기계의 압도적 활약과 커리어" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#134e5e">💪 헬스·운동</span><div class="bottom-title">엘링 홀란드: 맨시티 득점 기계의 압도적 활약과 커리어</div></div></a>
+<a class="bottom-card" href="posts/월드컵-결과-2026-07-12.html"><img src="thumbs/월드컵-결과-2026-07-12.webp" alt="역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면</div></div></a>
+<a class="bottom-card" href="posts/fifa-world-cup-2026-2026-07-12.html"><img src="thumbs/fifa-world-cup-2026-2026-07-12.webp" alt="2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석</div></div></a>
+<a class="bottom-card" href="posts/당진시-2026-07-12.html"><img src="thumbs/당진시-2026-07-12.webp" alt="충남 당진 가볼만한곳 추천, 서해안 숨은 명소 여행 코스" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#11998e">✈️ 여행</span><div class="bottom-title">충남 당진 가볼만한곳 추천, 서해안 숨은 명소 여행 코스</div></div></a>
+<a class="bottom-card" href="posts/argentina-vs-switzerland-2026-07-12.html"><img src="thumbs/argentina-vs-switzerland-2026-07-12.webp" alt="아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고</div></div></a>
+<a class="bottom-card" href="posts/피파랭킹-2026-07-12.html"><img src="thumbs/피파랭킹-2026-07-12.webp" alt="피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법</div></div></a>
+<a class="bottom-card" href="posts/프랑스-스페인-2026-07-12.html"><img src="thumbs/프랑스-스페인-2026-07-12.webp" alt="프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#11998e">✈️ 여행</span><div class="bottom-title">프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험</div></div></a>
+<a class="bottom-card" href="posts/목감천-2026-07-12.html"><img src="thumbs/목감천-2026-07-12.webp" alt="목감천 산책 코스 자전거 라이딩 명소 추천" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">목감천 산책 코스 자전거 라이딩 명소 추천</div></div></a>
+<a class="bottom-card" href="posts/하이브리드-차량-2026-07-11.html"><img src="thumbs/하이브리드-차량-2026-07-11.webp" alt="하이브리드 차량 구매 전 고려사항: 원리, 종류, 장점 비교" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">하이브리드 차량 구매 전 고려사항: 원리, 종류, 장점 비교</div></div></a>
+<a class="bottom-card" href="posts/윤세아-2026-07-11.html"><img src="thumbs/윤세아-2026-07-11.webp" alt="배우 윤세아 프로필, 주요 출연작, 나이 및 최신 활동 정보" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">배우 윤세아 프로필, 주요 출연작, 나이 및 최신 활동 정보</div></div></a>
+<a class="bottom-card" href="posts/손예진-아들-2026-07-11.html"><img src="thumbs/손예진-아들-2026-07-11.webp" alt="손예진 현빈 부부 아들 탄생과 육아 이야기, 현재 근황" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">손예진 현빈 부부 아들 탄생과 육아 이야기, 현재 근황</div></div></a>
+<a class="bottom-card" href="posts/팰-월드-패치-노트-2026-07-10.html"><img src="thumbs/팰-월드-패치-노트-2026-07-10.webp" alt="팰 월드 패치 노트: 최신 업데이트 내용과 적용 가이드" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">팰 월드 패치 노트: 최신 업데이트 내용과 적용 가이드</div></div></a>
+<a class="bottom-card" href="posts/노경필-2026-07-10.html"><img src="thumbs/노경필-2026-07-10.webp" alt="노경필 탐구: 이름의 의미와 잠재적 가치" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">노경필 탐구: 이름의 의미와 잠재적 가치</div></div></a>
+<a class="bottom-card" href="posts/스포티비뉴스-2026-07-10.html"><img src="thumbs/스포티비뉴스-2026-07-10.webp" alt="스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁</div></div></a>
+<a class="bottom-card" href="posts/제철-과일-2026-07-10.html"><img src="thumbs/제철-과일-2026-07-10.webp" alt="사계절 제철 과일 종류별 효능 및 신선하게 고르는 법" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#ff6b35">🍽️ 푸드·맛집</span><div class="bottom-title">사계절 제철 과일 종류별 효능 및 신선하게 고르는 법</div></div></a>
+<a class="bottom-card" href="posts/인테리어-소품-2026-07-10.html"><img src="thumbs/인테리어-소품-2026-07-10.webp" alt="작은 변화, 큰 효과! 인테리어 소품 활용 팁과 종류" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#c48458">🏠 홈·인테리어</span><div class="bottom-title">작은 변화, 큰 효과! 인테리어 소품 활용 팁과 종류</div></div></a>
+<a class="bottom-card" href="posts/무선-이어폰-비교-2026-07-10.html"><img src="thumbs/무선-이어폰-비교-2026-07-10.webp" alt="인기 무선 이어폰 비교 구매 가이드: 나에게 맞는 모델 찾기" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">인기 무선 이어폰 비교 구매 가이드: 나에게 맞는 모델 찾기</div></div></a>
+<a class="bottom-card" href="posts/노트북-추천-2026-07-09.html"><img src="thumbs/노트북-추천-2026-07-09.webp" alt="나에게 딱 맞는 노트북 찾기: 사용 목적별 노트북 추천 가이드" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">나에게 딱 맞는 노트북 찾기: 사용 목적별 노트북 추천 가이드</div></div></a>
+<a class="bottom-card" href="posts/반려동물-용품-2026-07-09.html"><img src="thumbs/반려동물-용품-2026-07-09.webp" alt="반려동물 용품 종류별 선택 가이드: 우리 아이에게 딱 맞는 필수품" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">반려동물 용품 종류별 선택 가이드: 우리 아이에게 딱 맞는 필수품</div></div></a>
+<a class="bottom-card" href="posts/홈트레이닝-2026-07-09.html"><img src="thumbs/홈트레이닝-2026-07-09.jpg" alt="홈트레이닝 성공 가이드: 집에서 건강을 만드는 가장 현명한 방법" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#134e5e">💪 헬스·운동</span><div class="bottom-title">홈트레이닝 성공 가이드: 집에서 건강을 만드는 가장 현명한 방법</div></div></a>
+<a class="bottom-card" href="posts/캠핑-용품-추천-2026-07-09.html"><img src="thumbs/캠핑-용품-추천-2026-07-09.jpg" alt="초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드</div></div></a>
+<a class="bottom-card" href="posts/재테크-방법-2026-07-09.html"><img src="thumbs/재테크-방법-2026-07-09.jpg" alt="초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#11694f">💰 재테크</span><div class="bottom-title">초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!</div></div></a>
+<a class="bottom-card" href="posts/다이어트-식단-2026-07-09.html"><img src="thumbs/다이어트-식단-2026-07-09.jpg" alt="나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심</div></div></a>
+<a class="bottom-card" href="posts/여름-휴가지-추천-2026-07-09.html"><img src="thumbs/여름-휴가지-추천-2026-07-09.jpg" alt="잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천</div></div></a>
+<a class="bottom-card" href="posts/장마-2026-07-08.html"><img src="thumbs/장마-2026-07-08.jpg" alt="장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책</div></div></a></div>
+</div>
+<div class="site-footer"><a href="about.html">블로그 소개</a>·<a href="privacy.html">개인정보처리방침</a>·<a href="contact.html">문의하기</a><div style="margin-top:8px;">© 2026 namorin</div></div>
 </body>
 </html>
