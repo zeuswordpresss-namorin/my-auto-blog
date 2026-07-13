@@ -33,6 +33,48 @@
     </style>
 </head>
 <body>
+
+    <!-- 모바일 및 웹 터치 최적화 오디오 플레이어 UI 주입 시작 -->
+    <div class="player-interface" style="
+        display: flex; align-items: center; background: #e9ecef;
+        padding: 12px 18px; border-radius: 30px; margin: 20px 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    ">
+        <button id="ui-ctrl-btn" class="toggle-control-btn" onclick="triggerAudioStream()" style="
+            width: 48px; height: 48px; background-color: #007bff; border: none;
+            color: #ffffff; border-radius: 50%; cursor: pointer; font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 3px 6px rgba(0,123,255,0.2);
+            transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+        ">▶</button>
+        <div class="player-status-block" style="margin-left: 15px; text-align: left;">
+            <p id="ui-status-text" class="main-status-label" style="margin: 0; font-size: 14px; font-weight: 600; color: #212529;">아나운서 리딩 듣기</p>
+            <p class="sub-status-label" style="margin: 0; font-size: 11px; color: #868e96; margin-top: 2px;">버튼을 터치하여 음성을 켜고 끌 수 있습니다. (ON/OFF)</p>
+        </div>
+    </div>
+    <audio id="core-audio-engine" src="./announcer_reading.mp3"></audio>
+    
+    <script>
+    function triggerAudioStream() {
+        const audio = document.getElementById('core-audio-engine');
+        const btn = document.getElementById('ui-ctrl-btn');
+        const txt = document.getElementById('ui-status-text');
+        if (audio.paused) {
+            audio.play(); btn.innerHTML = '⏸'; btn.style.backgroundColor = '#dc3545';
+            txt.innerText = '아나운서 음성 리딩 중...';
+        } else {
+            audio.pause(); btn.innerHTML = '▶'; btn.style.backgroundColor = '#007bff';
+            txt.innerText = '아나운서 리딩 일시정지';
+        }
+    }
+    document.getElementById('core-audio-engine').addEventListener('ended', function() {
+        document.getElementById('ui-ctrl-btn').innerHTML = '▶';
+        document.getElementById('ui-ctrl-btn').style.backgroundColor = '#007bff';
+        document.getElementById('ui-status-text').innerText = '아나운서 리딩 듣기';
+    });
+    </script>
+    <!-- 모바일 및 웹 터치 최적화 오디오 플레이어 UI 주입 끝 -->
+    
 <div class="wrapper">
     <h1>자동 생성 프로세스가 제어하는 스마트 홈 기기</h1>
     <div class="player-interface">
