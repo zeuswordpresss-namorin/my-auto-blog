@@ -81,7 +81,17 @@
   h1 { font-family: 'Noto Sans KR', 'Noto Sans KR', sans-serif; font-size: clamp(1.4em, 5vw, 1.9em); line-height: 1.35; margin: 0 0 8px; word-break: keep-all; }
   h2 { font-family: 'Noto Sans KR', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, #11694f22, transparent); border-left: 5px solid #11694f; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }
   p { margin: 1em 0; position: relative; z-index: 1; }
-  table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1.2em 0 0.4em; border-radius: 8px; border: 1px solid #eee; }
+  table { width: 100%; min-width: 460px; border-collapse: collapse; font-size: 0.92em; }
+  th, td { padding: 11px 14px; border-bottom: 1px solid #eee; text-align: left; line-height: 1.5; }
+  th { background: #11694f14; font-weight: 800; color: #111; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .table-zoom-btn { display: block; margin: 0 0 1.2em; text-align: right; }
+  .table-zoom-btn button { border: none; background: none; color: #11694f; font-size: 0.85em; font-weight: 700; cursor: pointer; padding: 4px 2px; }
+  .table-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+  .table-modal-inner { background: #fff; border-radius: 12px; padding: 18px; max-width: 95vw; max-height: 88vh; overflow: auto; }
+  .table-modal-inner table { min-width: 420px; font-size: 1em; }
+  .table-modal-close { display: block; margin: 0 0 10px auto; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 1em; cursor: pointer; }
   a.back { display: inline-block; margin: 20px 0; color: #11694f; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }
   .meta { color: #999; font-size: 0.85em; margin-bottom: 4px; }
   .related { margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }
@@ -128,6 +138,65 @@ function googleTranslateElementInit() {
 }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<div style="position:fixed;bottom:20px;right:20px;z-index:998;">
+  <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
+    style="width:50px;height:50px;border-radius:50%;border:none;background:#11694f;color:#fff;
+    font-size:20px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">🔊</button>
+</div>
+<script>
+(function() {
+  var synth = window.speechSynthesis;
+  if (!synth) return;
+  var speaking = false;
+
+  function pickVoice() {
+    var voices = synth.getVoices() || [];
+    var ko = voices.filter(function(v) { return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; });
+    var female = ko.filter(function(v) { return /female|여성|유나|보라|서연|지민/i.test(v.name); });
+    return female[0] || ko[0] || null;
+  }
+
+  function updateBtn() {
+    var btn = document.getElementById('tts-btn');
+    if (btn) btn.textContent = speaking ? '⏸️' : '🔊';
+  }
+
+  function speak() {
+    var content = document.querySelector('.content');
+    if (!content) return;
+    var text = (content.innerText || content.textContent || '').trim().slice(0, 3000);
+    if (!text) return;
+    var utter = new SpeechSynthesisUtterance(text);
+    var voice = pickVoice();
+    if (voice) utter.voice = voice;
+    utter.lang = 'ko-KR';
+    utter.rate = 0.92;
+    utter.pitch = 1.0;
+    utter.onend = function() { speaking = false; updateBtn(); };
+    utter.onerror = function() { speaking = false; updateBtn(); };
+    synth.cancel();
+    synth.speak(utter);
+    speaking = true;
+    updateBtn();
+  }
+
+  window.__ttsToggle = function() {
+    if (speaking) {
+      synth.cancel();
+      speaking = false;
+      updateBtn();
+    } else {
+      speak();
+    }
+  };
+
+  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 수동 버튼으로 대체)
+  setTimeout(function() {
+    try { speak(); } catch (e) {}
+  }, 1000);
+})();
+</script>
 <div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:76%;left:82%;font-size:56px;opacity:0.15;transform:rotate(0deg);">📊</span><span class="decor-item" style="top:63%;left:53%;font-size:41px;opacity:0.12;transform:rotate(25deg);">🏦</span><span class="decor-item" style="top:65%;left:67%;font-size:42px;opacity:0.12;transform:rotate(-28deg);">🪙</span><span class="decor-item" style="top:22%;left:89%;font-size:51px;opacity:0.11;transform:rotate(3deg);">📊</span><span class="decor-item" style="top:96%;left:19%;font-size:30px;opacity:0.16;transform:rotate(-26deg);">💵</span><span class="decor-item" style="top:13%;left:89%;font-size:27px;opacity:0.11;transform:rotate(3deg);">📈</span><span class="decor-item" style="top:67%;left:26%;font-size:36px;opacity:0.16;transform:rotate(-22deg);">💳</span><span class="decor-item" style="top:54%;left:76%;font-size:48px;opacity:0.14;transform:rotate(-24deg);">💵</span><span class="decor-item" style="top:18%;left:85%;font-size:42px;opacity:0.12;transform:rotate(16deg);">💰</span></div>
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
