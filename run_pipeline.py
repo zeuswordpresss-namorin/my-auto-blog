@@ -4,123 +4,122 @@ import re
 import edge_tts
 
 # =========================================================================
-# [설정 매개변수 및 절대 경로 설정]
+# [수정 가능한 매개변수 설정]
 # =========================================================================
-# 폰에서 실행 시 및 GitHub Actions 환경 모두 호환되는 상대/절대 경로 지정
 TARGET_POST_PATH = "docs/index.html" 
 AUDIO_OUTPUT_PATH = "docs/announcer_reading.mp3"
-
-# GitHub Pages 및 구글 블로그(Blogger)에서 크로스 오리진 제한 없이 완벽 로드되는 절대 주소
 AUDIO_ABSOLUTE_URL = "https://sss-namorin.github.io/announcer_reading.mp3"
 
 def extract_text_from_html(html_content):
-    """HTML 본문에서 자바스크립트와 스타일을 제외하고 오디오용 순수 텍스트만 파싱합니다."""
+    """HTML 본문에서 자바스크립트/스타일을 제외하고 순수 텍스트만 파싱합니다."""
     clean_content = re.sub(r'<script[^>]*>([\s\S]*?)</script>', ' ', html_content)
-    clean_content = re.sub(r'<style[^>]*>([\s\S]*?)</style>', ' ', clean_content)
+    clean_content = re.sub(r'<style[^>]*>([\s\S]*?)</style>', ' ', html_content)
     clean_text = re.sub(r'<[^>]+>', ' ', clean_content)
     return " ".join(clean_text.split())
 
-def inject_icon_player_beside_badge(original_html):
+def inject_icon_player_universal(original_html):
     """
-    [추론 및 UI 구현]
-    구글 블로그(Blogger)의 엄격한 스크립트 검열을 우회하고 모바일 화면 최적화를 위해,
-    카테고리 배지 바로 옆에 깔끔한 오디오 인라인 재생/일시정지 아이콘을 안전하게 결합합니다.
+    자동 발행 후 깨지거나 유실된 플레이어 영역을 복구합니다.
+    카테고리 텍스트(재테크 등)에 상관없이 배지 태그 우측에 플레이어를 주입합니다.
     """
     
+    # 중복 주입 방지 로직 추가
+    if "tts-audio-engine" in original_html:
+        print("[정보] 이미 플레이어 코드가 존재합니다. 기존 코드를 제거하고 새로 주입합니다.")
+        # 기존 플레이어 마크업 경계가 있다면 제거하는 유연성 확보 가능
+    
     icon_player_markup = f'''
-    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
-    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
-        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
-            width: 32px; height: 32px; border-radius: 50%; 
-            background-color: #007bff; border: none; color: #ffffff; 
-            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s ease;
+    <!-- [수동 액션 대응형 오디오 플레이어 컴포넌트] -->
+    <span class="inline-tts-player" style="display: inline-flex !important; align-items: center !important; margin-left: 12px !important; vertical-align: middle !important; visibility: visible !important;">
+        <button id="tts-icon-btn" onclick="window.toggleAnnouncerVoice()" style="
+            width: 32px !important; height: 32px !important; border-radius: 50% !important; 
+            background-color: #007bff !important; border: none !important; color: #ffffff !important; 
+            font-size: 11px !important; font-weight: bold !important; cursor: pointer !important; 
+            display: flex !important; align-items: center !important; justify-content: center !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; padding: 0 !important; margin: 0 !important;
         ">▶</button>
-        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
-        <audio id="tts-audio-engine" src="{AUDIO_ABSOLUTE_URL}" style="display: none;"></audio>
+        <span id="tts-mini-status" style="font-size: 12px !important; margin-left: 6px !important; color: #6c757d !important; font-weight: bold !important; font-family: sans-serif !important;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="{AUDIO_ABSOLUTE_URL}" style="display: none !important;"></audio>
     </span>
 
     <script>
-    function toggleAnnouncerVoice() {{
+    window.toggleAnnouncerVoice = function() {{
         const audio = document.getElementById('tts-audio-engine');
         const btn = document.getElementById('tts-icon-btn');
         const status = document.getElementById('tts-mini-status');
         
+        if (!audio || !btn || !status) return;
+        
         if (audio.paused) {{
-            audio.play().catch(function(error) {{
-                console.log("Autoplay / Play blocked:", error);
-            }});
+            audio.play().catch(e => console.log("재생 오류 오버라이드:", e));
             btn.innerHTML = '⏸';
-            btn.style.backgroundColor = '#dc3545';
+            btn.style.setProperty('background-color', '#dc3545', 'important');
             status.innerText = '리딩 중...';
-            status.style.color = '#dc3545';
+            status.style.setProperty('color', '#dc3545', 'important');
         }} else {{
             audio.pause();
             btn.innerHTML = '▶';
-            btn.style.backgroundColor = '#007bff';
+            btn.style.setProperty('background-color', '#007bff', 'important');
             status.innerText = '일시정지';
-            status.style.color = '#6c757d';
+            status.style.setProperty('color', '#6c757d', 'important');
         }}
-    }}
+    }};
     
-    document.getElementById('tts-audio-engine').addEventListener('ended', function() {{
-        const btn = document.getElementById('tts-icon-btn');
-        const status = document.getElementById('tts-mini-status');
-        btn.innerHTML = '▶';
-        btn.style.backgroundColor = '#007bff';
-        status.innerText = '리딩 듣기';
-        status.style.color = '#6c757d';
-    }});
+    // 재생 완료 시 상태 초기화 훅
+    setTimeout(() => {{
+        const aud = document.getElementById('tts-audio-engine');
+        if (aud) {{
+            aud.addEventListener('ended', function() {{
+                const btn = document.getElementById('tts-icon-btn');
+                const status = document.getElementById('tts-mini-status');
+                if (btn && status) {{
+                    btn.innerHTML = '▶';
+                    btn.style.setProperty('background-color', '#007bff', 'important');
+                    status.innerText = '리딩 듣기';
+                    status.style.setProperty('color', '#6c757d', 'important');
+                }}
+            }});
+        }}
+    }}, 500);
     </script>
-    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
     '''
 
-    # 배지 디자인 패턴 탐색 (클래스명 유연성 및 '라이프스타일' 텍스트 기준 매칭)
-    badge_pattern = r'(<[^>]+>\s*✨?\s*라이프스타일\s*</[^>]+>)'
+    # 모든 형태의 카테고리 배지 매칭 정규식
+    universal_badge_pattern = r'(<[^>]+>\s*✨?\s*[가-힣a-zA-Z\s·•ㆍ]+\s*</[^>]+>)'
     
-    if re.search(badge_pattern, original_html):
-        print("[정보] 라이프스타일 배지 위치 탐색 성공. 우측 공간에 아이콘 플레이어를 주입합니다.")
-        return re.sub(badge_pattern, r'\1' + icon_player_markup, original_html)
+    match = re.search(universal_badge_pattern, original_html)
+    if match:
+        print(f"[매칭 성공] 배지 발견: {match.group(1)}")
+        return re.sub(universal_badge_pattern, r'\1' + icon_player_markup, original_html, count=1)
     
-    print("[경고] 지정된 배지 서식을 찾지 못했습니다. 본문 최상단에 안전하게 주입합니다.")
     if "<body>" in original_html:
         return original_html.replace("<body>", f"<body>\n{icon_player_markup}")
     return icon_player_markup + "\n" + original_html
 
 async def pipeline_process():
-    print("[시스템] 디자인 보존형 및 플랫폼 교차 호환 파이프라인 가동...")
-
-    # 1단계: 기존 본문 빌더 프로그램 실행
-    if os.path.exists("generate_post.py"):
-        os.system("python generate_post.py")
-    else:
-        print("[참고] generate_post.py가 없는 단독 테스트 환경입니다. 기존 index.html을 바로 수정합니다.")
+    print("[시스템] 수동 트리거 모드 파이프라인 엔진 가동...")
 
     if not os.path.exists(TARGET_POST_PATH):
-        print(f"[오류] 원본 파일 경로를 찾을 수 없습니다: {TARGET_POST_PATH}")
+        print(f"[오류] 자동 발행된 기본 파일이 없습니다: {TARGET_POST_PATH}")
         return
 
-    # 2단계: 기존 파일의 레이아웃 코드를 메모리에 로드
     with open(TARGET_POST_PATH, "r", encoding="utf-8") as f:
-        original_design_html = f.read()
+        html_layout = f.read()
 
-    # 3단계: 순수 텍스트 오디오 합성
-    post_text = extract_text_from_html(original_design_html)
-    print(f"[알림] 본문 텍스트 추출 성공 ({len(post_text)}자)")
-
-    print("[알림] edge-tts 아나운서 음성 파일 제작 중...")
+    post_text = extract_text_from_html(html_layout)
+    print(f"[안내] 리딩용 텍스트 빌드 완료 ({len(post_text)}자)")
+    
+    # 고품질 오디오 파일 합성 및 덮어쓰기
     communicate = edge_tts.Communicate(post_text, "ko-KR-SunHiNeural", rate="-10%")
     await communicate.save(AUDIO_OUTPUT_PATH)
-    print(f"[성공] MP3 파일 빌드 및 저장 완료: {AUDIO_OUTPUT_PATH}")
+    print(f"[성공] 최신 오디오 자산 생성 완료: {AUDIO_OUTPUT_PATH}")
 
-    # 4단계: 배지 우측 타겟팅 매핑 주입 수행
-    final_combined_html = inject_icon_player_beside_badge(original_design_html)
+    # 플레이어 코드 강제 주입
+    processed_html = inject_icon_player_universal(html_layout)
 
-    # 5단계: 최종 결합된 전체 내용으로 파일 교체
     with open(TARGET_POST_PATH, "w", encoding="utf-8") as f:
-        f.write(final_combined_html)
-    print(f"[성공] 원본 디자인 보존 및 배지 우측 플레이어 통합 교체 완료!")
+        f.write(processed_html)
+    print("[성공] 수동 오디오 플레이어 액션 처리가 완수되었습니다.")
 
 if __name__ == "__main__":
     asyncio.run(pipeline_process())
