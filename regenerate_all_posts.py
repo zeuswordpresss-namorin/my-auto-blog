@@ -100,6 +100,7 @@ def rerender_post(post_meta: dict, article: dict) -> None:
         bottom_ad=gp._manual_ad_unit(),
         search_console_meta=gp._search_console_meta(),
         translate_widget=gp._translate_widget(),
+        tts_widget=gp._build_tts_widget(theme["accent"]),
     )
     with open(os.path.join(gp.POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
@@ -150,4 +151,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-
