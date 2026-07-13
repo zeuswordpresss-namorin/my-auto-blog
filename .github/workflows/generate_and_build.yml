@@ -5,6 +5,10 @@ on:
     - cron: '0 9 * * *' # 매일 오전 9시에 자동 생성 및 빌드 실행
   workflow_dispatch: # 스마트폰 GitHub 앱/웹 UI에서 원터치로 직접 수동 가동 가능
 
+# [핵심 수정 사항] GitHub Actions 봇에게 저장소 쓰기 권한을 명시적으로 부여합니다.
+permissions:
+  contents: write
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
@@ -23,7 +27,6 @@ jobs:
         pip install edge-tts
 
     - name: 1단계 - 기존 generate_post.py 실행 및 2단계 - 아나운서 TTS 및 플레이어 빌드 통합 실행
-      # run_pipeline.py 내부에서 기존 글 생성 문장을 추출하고 연이어 HTML/MP3를 자동 제작합니다.
       run: python run_pipeline.py
 
     - name: 3단계 - 빌드 완료된 파일(docs/) 자동 커밋 및 저장소 푸시
@@ -32,4 +35,3 @@ jobs:
         git config --local user.name "github-actions[bot]"
         git add docs/
         git diff --quiet && git diff --staged --quiet || (git commit -m "generate 실행에 의한 아나운서 오디오 및 모바일 플레이어 페이지 자동 빌드 완료" && git push)
-
