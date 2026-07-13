@@ -117,7 +117,11 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
 11. category가 "대출보험" 또는 "정부지원금"이면 (실제 금융/정책 정보라 신중해야 하므로):
     - 특정 금융사·상품명을 단정적으로 추천하지 않는다 (일반적인 조건/절차 위주로 설명)
     - 신청 절차나 자격요건은 "일반적으로"라는 표현을 쓰고, 최신 여부는 공식 기관 확인이 필요하다는 점을 본문에 자연스럽게 언급한다
-12. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
+12. 이 글이 여러 구체적인 상품·브랜드·모델을 비교하거나 소개하는 성격이면(예: "무선 이어폰 추천",
+    "OO 브랜드 총정리" 등), 그 각각을 "product_list"에 {"name": "상품/브랜드명", "description": "1문장 설명"}
+    형태로 채운다 (최대 6개). 이때 본문(html_body)에는 이 목록을 별도 불릿/표로 다시 나열하지 않는다
+    (product_list로 아이콘과 함께 자동 렌더링됨). 비교·소개형 글이 아니면 빈 배열로 둔다.
+13. 출력은 반드시 아래 JSON 형식만 반환한다. 다른 설명, 코드블록 기호(```) 없이 순수 JSON만 출력한다:
 {
   "title": "...",
   "html_body": "...",
@@ -126,7 +130,8 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
   "faq_items": [{"question": "...", "answer": "..."}],
   "howto_steps": [{"name": "...", "text": "..."}],
   "category": "위 10개 중 하나",
-  "product_keyword": "쇼핑 키워드 또는 빈 문자열"
+  "product_keyword": "쇼핑 키워드 또는 빈 문자열",
+  "product_list": [{"name": "...", "description": "..."}]
 }
 html_body는 <h2>, <p>, <table>, <ul> 등을 사용한 HTML 조각이어야 한다."""
 
@@ -284,6 +289,78 @@ def _ga_snippet() -> str:
 ENABLE_AUTO_TRANSLATE = os.environ.get("ENABLE_AUTO_TRANSLATE", "true").strip().lower() != "false"
 
 
+ENABLE_TTS = os.environ.get("ENABLE_TTS", "true").strip().lower() != "false"
+
+
+def _build_tts_widget(accent: str) -> str:
+    """상세페이지 진입 1초 후 본문을 자동으로 읽어주는 음성 안내 기능을 삽입합니다.
+    브라우저 내장 무료 음성합성(Web Speech API)을 사용하므로 별도 API 키나 음성파일
+    생성/호스팅 비용이 들지 않습니다. 한국어 여성 목소리를 우선 선택하고, 차분한 속도(0.92배속)로
+    읽습니다. 오디오 자동재생을 막는 브라우저(특히 일부 모바일 사파리)에서는 자동 시작이 안 될 수
+    있어, 우측 하단에 수동으로 켜고 끌 수 있는 버튼도 함께 제공합니다."""
+    if not ENABLE_TTS:
+        return ""
+    return f"""
+<div style="position:fixed;bottom:20px;right:20px;z-index:998;">
+  <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
+    style="width:50px;height:50px;border-radius:50%;border:none;background:{accent};color:#fff;
+    font-size:20px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">🔊</button>
+</div>
+<script>
+(function() {{
+  var synth = window.speechSynthesis;
+  if (!synth) return;
+  var speaking = false;
+
+  function pickVoice() {{
+    var voices = synth.getVoices() || [];
+    var ko = voices.filter(function(v) {{ return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; }});
+    var female = ko.filter(function(v) {{ return /female|여성|유나|보라|서연|지민/i.test(v.name); }});
+    return female[0] || ko[0] || null;
+  }}
+
+  function updateBtn() {{
+    var btn = document.getElementById('tts-btn');
+    if (btn) btn.textContent = speaking ? '⏸️' : '🔊';
+  }}
+
+  function speak() {{
+    var content = document.querySelector('.content');
+    if (!content) return;
+    var text = (content.innerText || content.textContent || '').trim().slice(0, 3000);
+    if (!text) return;
+    var utter = new SpeechSynthesisUtterance(text);
+    var voice = pickVoice();
+    if (voice) utter.voice = voice;
+    utter.lang = 'ko-KR';
+    utter.rate = 0.92;
+    utter.pitch = 1.0;
+    utter.onend = function() {{ speaking = false; updateBtn(); }};
+    utter.onerror = function() {{ speaking = false; updateBtn(); }};
+    synth.cancel();
+    synth.speak(utter);
+    speaking = true;
+    updateBtn();
+  }}
+
+  window.__ttsToggle = function() {{
+    if (speaking) {{
+      synth.cancel();
+      speaking = false;
+      updateBtn();
+    }} else {{
+      speak();
+    }}
+  }};
+
+  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 수동 버튼으로 대체)
+  setTimeout(function() {{
+    try {{ speak(); }} catch (e) {{}}
+  }}, 1000);
+}})();
+</script>"""
+
+
 def _translate_widget() -> str:
     """구글 번역 위젯(무료, API 키 불필요)을 삽입합니다.
     첫 화면에는 작은 지구본 아이콘만 보이고, 탭하면 그때 번역 선택창이 펼쳐집니다
@@ -403,7 +480,25 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
             {"@type": "ListItem", "position": 3, "name": title, "item": canonical_url},
         ],
     }
-    graph_data = {"@context": "https://schema.org", "@graph": [data, breadcrumb]}
+    graph_nodes = [data, breadcrumb]
+
+    products = article.get("product_list") or []
+    if products:
+        graph_nodes.append({
+            "@type": "ItemList",
+            "name": f"{title} - 소개된 상품 목록",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": i,
+                    "item": {"@type": "Product", "name": p.get("name", ""), "description": p.get("description", "")},
+                }
+                for i, p in enumerate(products[:6], 1)
+            ],
+        })
+        print(f"  → [스키마 마크업] ItemList 추가 (상품 {len(products[:6])}개)")
+
+    graph_data = {"@context": "https://schema.org", "@graph": graph_nodes}
 
     print(f"  → [스키마 마크업] AI가 선택한 타입: {schema_type} (+ BreadcrumbList)")
     return json.dumps(graph_data, ensure_ascii=False, indent=2)
@@ -467,7 +562,17 @@ POST_TEMPLATE = """<!DOCTYPE html>
   h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.4em, 5vw, 1.9em); line-height: 1.35; margin: 0 0 8px; word-break: keep-all; }}
   h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }}
   p {{ margin: 1em 0; position: relative; z-index: 1; }}
-  table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; }}
+  .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1.2em 0 0.4em; border-radius: 8px; border: 1px solid #eee; }}
+  table {{ width: 100%; min-width: 460px; border-collapse: collapse; font-size: 0.92em; }}
+  th, td {{ padding: 11px 14px; border-bottom: 1px solid #eee; text-align: left; line-height: 1.5; }}
+  th {{ background: {accent}14; font-weight: 800; color: #111; white-space: nowrap; }}
+  tr:last-child td {{ border-bottom: none; }}
+  .table-zoom-btn {{ display: block; margin: 0 0 1.2em; text-align: right; }}
+  .table-zoom-btn button {{ border: none; background: none; color: {accent}; font-size: 0.85em; font-weight: 700; cursor: pointer; padding: 4px 2px; }}
+  .table-modal {{ display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }}
+  .table-modal-inner {{ background: #fff; border-radius: 12px; padding: 18px; max-width: 95vw; max-height: 88vh; overflow: auto; }}
+  .table-modal-inner table {{ min-width: 420px; font-size: 1em; }}
+  .table-modal-close {{ display: block; margin: 0 0 10px auto; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 1em; cursor: pointer; }}
   a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }}
   .meta {{ color: #999; font-size: 0.85em; margin-bottom: 4px; }}
   .related {{ margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }}
@@ -501,6 +606,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 {translate_widget}
+{tts_widget}
 {decor_html}
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
@@ -1136,6 +1242,33 @@ def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
         return None
 
 
+def enhance_tables(html_body: str, accent: str) -> str:
+    """본문 안의 모든 <table>을 (1) 가로 스크롤 가능한 컨테이너 + (2) '표 크게 보기' 버튼으로
+    감쌉니다. 버튼을 누르면 같은 표를 화면 중앙에 큼직하게 띄워주는 모달이 열립니다.
+    <button onclick="...">만 사용해서(=javascript: 링크 미사용) 콘텐츠 필터가 엄격한
+    환경(일부 블로거 테마 등)에서도 제거될 가능성을 최소화했습니다."""
+    counter = {"n": 0}
+
+    def wrap_table(match):
+        counter["n"] += 1
+        uid = f"tblzoom{counter['n']}_{random.randint(1000, 9999)}"
+        table_html = match.group(0)
+        return (
+            f'<div class="table-scroll">{table_html}</div>'
+            f'<div class="table-zoom-btn"><button type="button" '
+            f'onclick="document.getElementById(\'{uid}\').style.display=\'flex\';">🔍 표 크게 보기</button></div>'
+            f'<div id="{uid}" class="table-modal" '
+            f'onclick="if(event.target===this){{this.style.display=\'none\';}}">'
+            f'<div class="table-modal-inner">'
+            f'<button type="button" class="table-modal-close" '
+            f'onclick="document.getElementById(\'{uid}\').style.display=\'none\';">✕</button>'
+            f'{table_html}'
+            f'</div></div>'
+        )
+
+    return re.sub(r"<table.*?</table>", wrap_table, html_body, flags=re.DOTALL)
+
+
 def insert_content_image(article: dict, slug: str) -> dict:
     """본문 첫 소제목(H2) 바로 뒤에 주제와 관련된 실제 무료 이미지를 1장 삽입합니다."""
     category = article.get("category", "라이프스타일")
@@ -1160,6 +1293,59 @@ def insert_content_image(article: dict, slug: str) -> dict:
     else:
         article["html_body"] = img_html + article["html_body"]
     return article
+
+
+def _fetch_product_icon(product_name: str, seed: int, size=(160, 160)):
+    """상품/브랜드명 기반 작은 연필 스케치 아이콘을 무료로 생성합니다 (Pollinations.ai)."""
+    prompt = (
+        f"minimalist pencil sketch icon of {product_name}, single centered object, "
+        "clean line art, simple outline, white background, no text, no watermark"
+    )
+    url = (
+        f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
+        f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
+    )
+    try:
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
+        img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+        if img.size != size:
+            img = img.resize(size)
+        return img
+    except Exception as e:
+        print(f"  → [상품 아이콘] 생성 실패, 아이콘 없이 표시: {e}")
+        return None
+
+
+def build_product_list_html(article: dict, slug: str, accent: str) -> str:
+    """product_list에 담긴 상품들을 아이콘과 함께 카드 목록으로 렌더링합니다."""
+    products = article.get("product_list") or []
+    if not products:
+        return ""
+
+    os.makedirs(os.path.join(DOCS_DIR, "thumbs"), exist_ok=True)
+    cards = []
+    for i, item in enumerate(products[:6], 1):
+        name = item.get("name", "")
+        desc = item.get("description", "")
+        seed = int(hashlib.md5(f"{slug}-product-{i}".encode("utf-8")).hexdigest(), 16) % 100000
+        icon = _fetch_product_icon(name, seed)
+
+        if icon is not None:
+            icon_filename = f"{slug}-product{i}.webp"
+            icon.save(os.path.join(DOCS_DIR, "thumbs", icon_filename), format="WEBP", quality=80)
+            icon_html = f'<img src="../thumbs/{icon_filename}" alt="{name}" loading="lazy" style="width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;">'
+        else:
+            icon_html = f'<div style="width:56px;height:56px;border-radius:10px;background:{accent}22;flex-shrink:0;"></div>'
+
+        cards.append(
+            '<div style="display:flex;gap:14px;align-items:center;margin:10px 0;padding:12px 14px;'
+            f'background:#f7f8fa;border-radius:10px;">{icon_html}'
+            f'<div><p style="margin:0 0 3px;font-weight:700;color:#111;">{name}</p>'
+            f'<p style="margin:0;color:#555;font-size:0.92em;line-height:1.5;">{desc}</p></div></div>'
+        )
+
+    return '<h2 style="margin-top:2em;">한눈에 보는 상품 목록</h2>' + "".join(cards)
 
 
 def add_coupang_markup(article: dict) -> dict:
@@ -1249,12 +1435,16 @@ def save_post(article: dict):
     cleaned_body = re.sub(r"<h[23]>자주\s*묻는\s*질문.*?</table>", "", cleaned_body, flags=re.DOTALL | re.IGNORECASE)
     article["html_body"] = cleaned_body
 
+    # 본문에 남아있는(비교표 등 정상적인) 모든 표에 가독성 개선 + 클릭시 확대 기능 적용
+    article["html_body"] = enhance_tables(article["html_body"], theme["accent"])
+
     # 본문 중간에 주제 관련 실제 이미지 삽입 (실패해도 조용히 건너뜀)
     article = insert_content_image(article, slug)
 
     # FAQ 섹션을 구조화된 데이터로 직접 렌더링해서 html_body에 병합
     # (article 딕셔너리를 직접 수정하므로, 이후 블로거 발행 시에도 동일하게 반영됨)
     article["html_body"] += build_faq_section_html(article, theme["accent"])
+    article["html_body"] += build_product_list_html(article, slug, theme["accent"])
 
     post_url = f"{SITE_URL}/posts/{post_filename}" if SITE_URL else f"posts/{post_filename}"
     thumb_url = f"{SITE_URL}/thumbs/{thumb_filename}" if SITE_URL else f"../thumbs/{thumb_filename}"
@@ -1287,6 +1477,7 @@ def save_post(article: dict):
         bottom_ad=_manual_ad_unit(),
         search_console_meta=_search_console_meta(),
         translate_widget=_translate_widget(),
+        tts_widget=_build_tts_widget(theme["accent"]),
     )
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
