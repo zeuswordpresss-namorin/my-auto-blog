@@ -183,42 +183,935 @@ function googleTranslateElementInit() {
     <a class="dash-link" href="dashboard.html">📊 성과관리</a>
   </div>
   <p class="intro">namorin | 구글 트렌드와 주간 인기 검색어 정보</p>
-  <div class="pill-row"><span class="pill" style="background:#ff6b9d">💄 뷰티·패션</span><span class="pill" style="background:#ff6b35">🍽️ 푸드·맛집</span><span class="pill" style="background:#11998e">✈️ 여행</span><span class="pill" style="background:#2a5298">💻 테크·IT</span><span class="pill" style="background:#11694f">💰 재테크</span><span class="pill" style="background:#134e5e">💪 헬스·운동</span><span class="pill" style="background:#c48458">🏠 홈·인테리어</span><span class="pill" style="background:#4a90d9">✨ 라이프스타일</span><span class="pill" style="background:#1e3a5f">🏦 대출·보험</span><span class="pill" style="background:#00695c">🏛️ 정부지원금</span></div>
+  <div class="pill-row"><span class="pill" style="background:#ff6b9d">💄 뷰티·패션</span><span class="pill" style="background:#ff6b35">🍽️ 푸드·맛집</span><span class="pill" style="background:#11998e">✈️ 여행</span><span class="pill" style="background:#2a5298">💻 테크·IT</span><span class="pill" style="background:#11694f">💰 재테크</span><span class="pill" style="background:#134e5e">💪 헬스·운동</span><span class="pill" style="background:#c48458">🏠 홈·인테리어</span><span class="pill" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <span class="pill" style="background:#1e3a5f">🏦 대출·보험</span><span class="pill" style="background:#00695c">🏛️ 정부지원금</span></div>
 </div>
 
 <div class="content-wrap">
 <div class="tier-label">🔥 최신 이야기</div><a class="hero" href="posts/미국-상품거래위원회-2026-07-13.html"><img src="thumbs/미국-상품거래위원회-2026-07-13.webp" alt="미국 상품거래위원회 CFTC: 주요 역할과 기능 완벽 이해" loading="eager" fetchpriority="high"><div class="hero-body"><span class="hero-badge" style="background:#11694f">💰 재테크</span><div class="hero-title">미국 상품거래위원회 CFTC: 주요 역할과 기능 완벽 이해</div><div class="date">2026-07-13</div></div></a>
-<div class="tier-label">📖 다음 이야기</div><div class="mid-grid"><a class="mid-card" href="posts/린지-그레이엄-2026-07-13.html"><img src="thumbs/린지-그레이엄-2026-07-13.webp" alt="린지 그레이엄: 미국 공화당 상원의원 주요 활동과 입장" loading="lazy"><div class="mid-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="mid-title">린지 그레이엄: 미국 공화당 상원의원 주요 활동과 입장</div><div class="date">2026-07-13</div></div></a>
+<div class="tier-label">📖 다음 이야기</div><div class="mid-grid"><a class="mid-card" href="posts/린지-그레이엄-2026-07-13.html"><img src="thumbs/린지-그레이엄-2026-07-13.webp" alt="린지 그레이엄: 미국 공화당 상원의원 주요 활동과 입장" loading="lazy"><div class="mid-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="mid-title">린지 그레이엄: 미국 공화당 상원의원 주요 활동과 입장</div><div class="date">2026-07-13</div></div></a>
 <a class="mid-card" href="posts/구마유시-2026-07-13.html"><img src="thumbs/구마유시-2026-07-13.webp" alt="T1 구마유시 이민형 선수 프로필 및 활약상 총정리" loading="lazy"><div class="mid-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="mid-title">T1 구마유시 이민형 선수 프로필 및 활약상 총정리</div><div class="date">2026-07-13</div></div></a></div>
 <div class="tier-label">🗂️ 지난 글 모아보기</div><div class="bottom-grid"><a class="bottom-card" href="posts/통화-스와프-2026-07-13.html"><img src="thumbs/통화-스와프-2026-07-13.webp" alt="통화 스와프 뜻 필요성 금융시장 영향 자세히 알아보기" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#11694f">💰 재테크</span><div class="bottom-title">통화 스와프 뜻 필요성 금융시장 영향 자세히 알아보기</div></div></a>
-<a class="bottom-card" href="posts/유병재-2026-07-13.html"><img src="thumbs/유병재-2026-07-13.webp" alt="유병재 독보적 유머와 작가 정신: 끊임없이 진화하는 엔터테이너" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">유병재 독보적 유머와 작가 정신: 끊임없이 진화하는 엔터테이너</div></div></a>
-<a class="bottom-card" href="posts/롯데그룹-2026-07-13.html"><img src="thumbs/롯데그룹-2026-07-13.webp" alt="롯데그룹 역사와 주요 사업, 핵심 계열사 총정리" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">롯데그룹 역사와 주요 사업, 핵심 계열사 총정리</div></div></a>
-<a class="bottom-card" href="posts/축구-감독-2026-07-12.html"><img src="thumbs/축구-감독-2026-07-12.webp" alt="축구 감독의 역할과 자격 요건, 성공적인 지도자 되는 길" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">축구 감독의 역할과 자격 요건, 성공적인 지도자 되는 길</div></div></a>
+<a class="bottom-card" href="posts/유병재-2026-07-13.html"><img src="thumbs/유병재-2026-07-13.webp" alt="유병재 독보적 유머와 작가 정신: 끊임없이 진화하는 엔터테이너" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">유병재 독보적 유머와 작가 정신: 끊임없이 진화하는 엔터테이너</div></div></a>
+<a class="bottom-card" href="posts/롯데그룹-2026-07-13.html"><img src="thumbs/롯데그룹-2026-07-13.webp" alt="롯데그룹 역사와 주요 사업, 핵심 계열사 총정리" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">롯데그룹 역사와 주요 사업, 핵심 계열사 총정리</div></div></a>
+<a class="bottom-card" href="posts/축구-감독-2026-07-12.html"><img src="thumbs/축구-감독-2026-07-12.webp" alt="축구 감독의 역할과 자격 요건, 성공적인 지도자 되는 길" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">축구 감독의 역할과 자격 요건, 성공적인 지도자 되는 길</div></div></a>
 <a class="bottom-card" href="posts/엘링-홀란드-2026-07-12.html"><img src="thumbs/엘링-홀란드-2026-07-12.webp" alt="엘링 홀란드: 맨시티 득점 기계의 압도적 활약과 커리어" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#134e5e">💪 헬스·운동</span><div class="bottom-title">엘링 홀란드: 맨시티 득점 기계의 압도적 활약과 커리어</div></div></a>
-<a class="bottom-card" href="posts/월드컵-결과-2026-07-12.html"><img src="thumbs/월드컵-결과-2026-07-12.webp" alt="역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면</div></div></a>
-<a class="bottom-card" href="posts/fifa-world-cup-2026-2026-07-12.html"><img src="thumbs/fifa-world-cup-2026-2026-07-12.webp" alt="2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석</div></div></a>
+<a class="bottom-card" href="posts/월드컵-결과-2026-07-12.html"><img src="thumbs/월드컵-결과-2026-07-12.webp" alt="역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">역대 월드컵 우승국 및 주요 결과 분석: 축구 역사의 명장면</div></div></a>
+<a class="bottom-card" href="posts/fifa-world-cup-2026-2026-07-12.html"><img src="thumbs/fifa-world-cup-2026-2026-07-12.webp" alt="2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">2026 FIFA 월드컵 개최지 및 변화: 역대급 확장 대회 완벽 분석</div></div></a>
 <a class="bottom-card" href="posts/당진시-2026-07-12.html"><img src="thumbs/당진시-2026-07-12.webp" alt="충남 당진 가볼만한곳 추천, 서해안 숨은 명소 여행 코스" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#11998e">✈️ 여행</span><div class="bottom-title">충남 당진 가볼만한곳 추천, 서해안 숨은 명소 여행 코스</div></div></a>
-<a class="bottom-card" href="posts/argentina-vs-switzerland-2026-07-12.html"><img src="thumbs/argentina-vs-switzerland-2026-07-12.webp" alt="아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고</div></div></a>
-<a class="bottom-card" href="posts/피파랭킹-2026-07-12.html"><img src="thumbs/피파랭킹-2026-07-12.webp" alt="피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법</div></div></a>
+<a class="bottom-card" href="posts/argentina-vs-switzerland-2026-07-12.html"><img src="thumbs/argentina-vs-switzerland-2026-07-12.webp" alt="아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">아르헨티나 스위스 2014 월드컵 16강 명승부 경기 회고</div></div></a>
+<a class="bottom-card" href="posts/피파랭킹-2026-07-12.html"><img src="thumbs/피파랭킹-2026-07-12.webp" alt="피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">피파랭킹 보는 법: FIFA 랭킹 의미와 변화된 계산법</div></div></a>
 <a class="bottom-card" href="posts/프랑스-스페인-2026-07-12.html"><img src="thumbs/프랑스-스페인-2026-07-12.webp" alt="프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#11998e">✈️ 여행</span><div class="bottom-title">프랑스 스페인 여행: 국경을 넘는 유럽의 다채로운 매력 탐험</div></div></a>
-<a class="bottom-card" href="posts/목감천-2026-07-12.html"><img src="thumbs/목감천-2026-07-12.webp" alt="목감천 산책 코스 자전거 라이딩 명소 추천" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">목감천 산책 코스 자전거 라이딩 명소 추천</div></div></a>
+<a class="bottom-card" href="posts/목감천-2026-07-12.html"><img src="thumbs/목감천-2026-07-12.webp" alt="목감천 산책 코스 자전거 라이딩 명소 추천" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">목감천 산책 코스 자전거 라이딩 명소 추천</div></div></a>
 <a class="bottom-card" href="posts/하이브리드-차량-2026-07-11.html"><img src="thumbs/하이브리드-차량-2026-07-11.webp" alt="하이브리드 차량 구매 전 고려사항: 원리, 종류, 장점 비교" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">하이브리드 차량 구매 전 고려사항: 원리, 종류, 장점 비교</div></div></a>
-<a class="bottom-card" href="posts/윤세아-2026-07-11.html"><img src="thumbs/윤세아-2026-07-11.webp" alt="배우 윤세아 프로필, 주요 출연작, 나이 및 최신 활동 정보" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">배우 윤세아 프로필, 주요 출연작, 나이 및 최신 활동 정보</div></div></a>
-<a class="bottom-card" href="posts/손예진-아들-2026-07-11.html"><img src="thumbs/손예진-아들-2026-07-11.webp" alt="손예진 현빈 부부 아들 탄생과 육아 이야기, 현재 근황" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">손예진 현빈 부부 아들 탄생과 육아 이야기, 현재 근황</div></div></a>
+<a class="bottom-card" href="posts/윤세아-2026-07-11.html"><img src="thumbs/윤세아-2026-07-11.webp" alt="배우 윤세아 프로필, 주요 출연작, 나이 및 최신 활동 정보" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">배우 윤세아 프로필, 주요 출연작, 나이 및 최신 활동 정보</div></div></a>
+<a class="bottom-card" href="posts/손예진-아들-2026-07-11.html"><img src="thumbs/손예진-아들-2026-07-11.webp" alt="손예진 현빈 부부 아들 탄생과 육아 이야기, 현재 근황" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">손예진 현빈 부부 아들 탄생과 육아 이야기, 현재 근황</div></div></a>
 <a class="bottom-card" href="posts/팰-월드-패치-노트-2026-07-10.html"><img src="thumbs/팰-월드-패치-노트-2026-07-10.webp" alt="팰 월드 패치 노트: 최신 업데이트 내용과 적용 가이드" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">팰 월드 패치 노트: 최신 업데이트 내용과 적용 가이드</div></div></a>
-<a class="bottom-card" href="posts/노경필-2026-07-10.html"><img src="thumbs/노경필-2026-07-10.webp" alt="노경필 탐구: 이름의 의미와 잠재적 가치" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">노경필 탐구: 이름의 의미와 잠재적 가치</div></div></a>
-<a class="bottom-card" href="posts/스포티비뉴스-2026-07-10.html"><img src="thumbs/스포티비뉴스-2026-07-10.webp" alt="스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁</div></div></a>
+<a class="bottom-card" href="posts/노경필-2026-07-10.html"><img src="thumbs/노경필-2026-07-10.webp" alt="노경필 탐구: 이름의 의미와 잠재적 가치" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">노경필 탐구: 이름의 의미와 잠재적 가치</div></div></a>
+<a class="bottom-card" href="posts/스포티비뉴스-2026-07-10.html"><img src="thumbs/스포티비뉴스-2026-07-10.webp" alt="스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁</div></div></a>
 <a class="bottom-card" href="posts/제철-과일-2026-07-10.html"><img src="thumbs/제철-과일-2026-07-10.webp" alt="사계절 제철 과일 종류별 효능 및 신선하게 고르는 법" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#ff6b35">🍽️ 푸드·맛집</span><div class="bottom-title">사계절 제철 과일 종류별 효능 및 신선하게 고르는 법</div></div></a>
 <a class="bottom-card" href="posts/인테리어-소품-2026-07-10.html"><img src="thumbs/인테리어-소품-2026-07-10.webp" alt="작은 변화, 큰 효과! 인테리어 소품 활용 팁과 종류" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#c48458">🏠 홈·인테리어</span><div class="bottom-title">작은 변화, 큰 효과! 인테리어 소품 활용 팁과 종류</div></div></a>
 <a class="bottom-card" href="posts/무선-이어폰-비교-2026-07-10.html"><img src="thumbs/무선-이어폰-비교-2026-07-10.webp" alt="인기 무선 이어폰 비교 구매 가이드: 나에게 맞는 모델 찾기" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">인기 무선 이어폰 비교 구매 가이드: 나에게 맞는 모델 찾기</div></div></a>
 <a class="bottom-card" href="posts/노트북-추천-2026-07-09.html"><img src="thumbs/노트북-추천-2026-07-09.webp" alt="나에게 딱 맞는 노트북 찾기: 사용 목적별 노트북 추천 가이드" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#2a5298">💻 테크·IT</span><div class="bottom-title">나에게 딱 맞는 노트북 찾기: 사용 목적별 노트북 추천 가이드</div></div></a>
-<a class="bottom-card" href="posts/반려동물-용품-2026-07-09.html"><img src="thumbs/반려동물-용품-2026-07-09.webp" alt="반려동물 용품 종류별 선택 가이드: 우리 아이에게 딱 맞는 필수품" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">반려동물 용품 종류별 선택 가이드: 우리 아이에게 딱 맞는 필수품</div></div></a>
+<a class="bottom-card" href="posts/반려동물-용품-2026-07-09.html"><img src="thumbs/반려동물-용품-2026-07-09.webp" alt="반려동물 용품 종류별 선택 가이드: 우리 아이에게 딱 맞는 필수품" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">반려동물 용품 종류별 선택 가이드: 우리 아이에게 딱 맞는 필수품</div></div></a>
 <a class="bottom-card" href="posts/홈트레이닝-2026-07-09.html"><img src="thumbs/홈트레이닝-2026-07-09.jpg" alt="홈트레이닝 성공 가이드: 집에서 건강을 만드는 가장 현명한 방법" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#134e5e">💪 헬스·운동</span><div class="bottom-title">홈트레이닝 성공 가이드: 집에서 건강을 만드는 가장 현명한 방법</div></div></a>
-<a class="bottom-card" href="posts/캠핑-용품-추천-2026-07-09.html"><img src="thumbs/캠핑-용품-추천-2026-07-09.jpg" alt="초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드</div></div></a>
+<a class="bottom-card" href="posts/캠핑-용품-추천-2026-07-09.html"><img src="thumbs/캠핑-용품-추천-2026-07-09.jpg" alt="초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">초보부터 전문가까지, 성공적인 캠핑을 위한 필수 용품 추천과 선택 가이드</div></div></a>
 <a class="bottom-card" href="posts/재테크-방법-2026-07-09.html"><img src="thumbs/재테크-방법-2026-07-09.jpg" alt="초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#11694f">💰 재테크</span><div class="bottom-title">초보자를 위한 현명한 재테크 방법: 지금 바로 시작하세요!</div></div></a>
-<a class="bottom-card" href="posts/다이어트-식단-2026-07-09.html"><img src="thumbs/다이어트-식단-2026-07-09.jpg" alt="나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심</div></div></a>
-<a class="bottom-card" href="posts/여름-휴가지-추천-2026-07-09.html"><img src="thumbs/여름-휴가지-추천-2026-07-09.jpg" alt="잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천</div></div></a>
-<a class="bottom-card" href="posts/장마-2026-07-08.html"><img src="thumbs/장마-2026-07-08.jpg" alt="장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span><div class="bottom-title">장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책</div></div></a></div>
+<a class="bottom-card" href="posts/다이어트-식단-2026-07-09.html"><img src="thumbs/다이어트-식단-2026-07-09.jpg" alt="나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">나에게 맞는 다이어트 식단 찾기: 건강하고 지속 가능한 체중 감량의 핵심</div></div></a>
+<a class="bottom-card" href="posts/여름-휴가지-추천-2026-07-09.html"><img src="thumbs/여름-휴가지-추천-2026-07-09.jpg" alt="잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">잊지 못할 여름휴가, 당신에게 맞는 국내외 휴가지 추천</div></div></a>
+<a class="bottom-card" href="posts/장마-2026-07-08.html"><img src="thumbs/장마-2026-07-08.jpg" alt="장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책" loading="lazy"><div class="bottom-body"><span class="badge-sm" style="background:#4a90d9">✨ 라이프스타일</span>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 시작 (GitHub Pages & Blogger 호환) -->
+    <span class="inline-tts-player" style="display: inline-flex; align-items: center; margin-left: 10px; vertical-align: middle;">
+        <button id="tts-icon-btn" onclick="toggleAnnouncerVoice()" style="
+            width: 32px; height: 32px; border-radius: 50%; 
+            background-color: #007bff; border: none; color: #ffffff; 
+            font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+        ">▶</button>
+        <span id="tts-mini-status" style="font-size: 12px; margin-left: 6px; color: #6c757d; font-weight: 500;">리딩 듣기</span>
+        <audio id="tts-audio-engine" src="https://sss-namorin.github.io/announcer_reading.mp3" style="display: none;"></audio>
+    </span>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        
+        if (audio.paused) {
+            audio.play().catch(function(error) {
+                console.log("Autoplay / Play blocked:", error);
+            });
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            status.innerText = '리딩 중...';
+            status.style.color = '#dc3545';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            status.innerText = '일시정지';
+            status.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        const btn = document.getElementById('tts-icon-btn');
+        const status = document.getElementById('tts-mini-status');
+        btn.innerHTML = '▶';
+        btn.style.backgroundColor = '#007bff';
+        status.innerText = '리딩 듣기';
+        status.style.color = '#6c757d';
+    });
+    </script>
+    <!-- 아나운서 TTS 본문 내장형 미니 플레이어 끝 -->
+    <div class="bottom-title">장마, 한국의 여름을 준비하는 지혜: 원리, 영향, 대비책</div></div></a></div>
 </div>
 <div class="site-footer"><a href="about.html">블로그 소개</a>·<a href="privacy.html">개인정보처리방침</a>·<a href="contact.html">문의하기</a><div style="margin-top:8px;">© 2026 namorin</div></div>
 </body>
