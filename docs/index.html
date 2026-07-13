@@ -160,6 +160,61 @@
 </head>
 <body>
 
+    <!-- 구글 블로그 및 웹 최적화 아나운서 TTS 플레이어 시작 -->
+    <div class="voice-player-widget" style="
+        max-width: 100%; margin: 20px auto; padding: 15px; 
+        background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 16px; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    ">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+            <button id="tts-ctrl-btn" onclick="toggleAnnouncerVoice()" style="
+                width: 46px; height: 46px; border-radius: 50%; 
+                background-color: #007bff; border: none; color: #ffffff; 
+                font-size: 16px; font-weight: bold; cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
+                box-shadow: 0 2px 5px rgba(0,123,255,0.3);
+                -webkit-tap-highlight-color: transparent;
+            ">▶</button>
+            <div style="text-align: left;">
+                <p id="tts-status-title" style="margin: 0; font-size: 14px; font-weight: bold; color: #212529;">아나운서 리딩 듣기</p>
+                <span style="font-size: 11px; color: #6c757d;">터치 시 목소리 ON / OFF (크로스 브라우징 지원)</span>
+            </div>
+        </div>
+        
+        <!-- 구글 블로그 보안 정책 우회용 표준 브라우저 오디오 바 (스크립트 차단 대비용 내장형) -->
+        <audio id="tts-audio-engine" src="https://zeuswordpress-namorin.github.io/my-auto-blog/announcer_reading.mp3" controls style="width: 100%; height: 32px; margin-top: 5px;"></audio>
+    </div>
+
+    <script>
+    function toggleAnnouncerVoice() {
+        const audio = document.getElementById('tts-audio-engine');
+        const btn = document.getElementById('tts-ctrl-btn');
+        const txt = document.getElementById('tts-status-title');
+        
+        if (audio.paused) {
+            audio.play();
+            btn.innerHTML = '⏸';
+            btn.style.backgroundColor = '#dc3545';
+            txt.innerText = '아나운서 음성 리딩 중...';
+        } else {
+            audio.pause();
+            btn.innerHTML = '▶';
+            btn.style.backgroundColor = '#007bff';
+            txt.innerText = '아나운서 리딩 일시정지';
+        }
+    }
+    
+    // 오디오 종료 시 재생 버튼 상태 복구 동기화
+    document.getElementById('tts-audio-engine').addEventListener('ended', function() {
+        document.getElementById('tts-ctrl-btn').innerHTML = '▶';
+        document.getElementById('tts-ctrl-btn').style.backgroundColor = '#007bff';
+        document.getElementById('tts-status-title').innerText = '아나운서 리딩 듣기';
+    });
+    </script>
+    <!-- 구글 블로그 및 웹 최적화 아나운서 TTS 플레이어 끝 -->
+    
+
 <div style="position:fixed;top:10px;right:10px;z-index:999;">
   <button onclick="var e=document.getElementById('gt-box');e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none';"
     style="width:38px;height:38px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:17px;cursor:pointer;line-height:1;">🌐</button>
