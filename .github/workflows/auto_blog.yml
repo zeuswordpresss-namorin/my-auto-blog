@@ -22,6 +22,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 10   # 어떤 이유로든 멈추면 10분 후 자동 실패 처리 (무한 대기 방지)
     steps:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
@@ -31,8 +32,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 무료 한글 폰트 설치 (나눔고딕)
-        run: sudo apt-get update && sudo apt-get install -y fonts-nanum
+      - name: 무료 한글 폰트 다운로드 (나눔고딕)
+        # apt-get은 우분투 패키지 전체 목록을 새로 받아오느라 몇 분씩 걸리고 가끔 멈추기도 합니다.
+        # 실제 필요한 건 폰트 파일 하나뿐이라, 구글 폰트 공식 저장소에서 직접 받는 방식으로 바꿔
+        # 훨씬 빠르고 안정적으로 만들었습니다 (보통 몇 초 안에 끝남).
+        run: |
+          curl -fsSL -o font.ttf \
+            "https://raw.githubusercontent.com/google/fonts/main/ofl/nanumgothic/NanumGothic-Bold.ttf" \
+            --max-time 30 || echo "폰트 다운로드 실패, 기본 폰트로 대체됩니다 (한글이 깨져 보일 수 있음)"
 
       - name: 필요 패키지 설치
         run: pip install requests pillow
