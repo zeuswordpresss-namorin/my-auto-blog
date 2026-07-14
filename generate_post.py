@@ -70,8 +70,8 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REFRESH_TOKEN = os.environ.get("GOOGLE_REFRESH_TOKEN", "")
 
 FONT_CANDIDATES = [
-    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
-    "font.ttf",
+    "font.ttf",  # 워크플로에서 직접 다운로드하는 나눔고딕 (기본 방식)
+    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",  # apt로 설치했을 경우 대비(하위 호환)
 ]
 
 DOCS_DIR = "docs"
