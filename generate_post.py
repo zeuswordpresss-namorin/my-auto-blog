@@ -292,12 +292,15 @@ ENABLE_AUTO_TRANSLATE = os.environ.get("ENABLE_AUTO_TRANSLATE", "true").strip().
 ENABLE_TTS = os.environ.get("ENABLE_TTS", "true").strip().lower() != "false"
 
 
-def _build_tts_widget(accent: str) -> str:
+def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
     """상세페이지 진입 1초 후 본문을 자동으로 읽어주는 음성 안내 기능을 삽입합니다.
     브라우저 내장 무료 음성합성(Web Speech API)을 사용하므로 별도 API 키나 음성파일
     생성/호스팅 비용이 들지 않습니다. 한국어 여성 목소리를 우선 선택하고, 차분한 속도(0.92배속)로
     읽습니다. 오디오 자동재생을 막는 브라우저(특히 일부 모바일 사파리)에서는 자동 시작이 안 될 수
-    있어, 우측 하단에 수동으로 켜고 끌 수 있는 버튼도 함께 제공합니다."""
+    있어, 우측 하단에 수동으로 켜고 끌 수 있는 버튼도 함께 제공합니다.
+    content_selector: 실제로 읽어야 할 본문 요소를 가리키는 CSS 선택자. GitHub Pages 페이지는
+    본문이 <div class="content">로 감싸여 있지만, 블로거는 그런 래퍼가 없어서 발행할 때
+    별도 id를 만들어 넘겨줘야 합니다 (안 그러면 아무것도 못 찾아서 조용히 아무 반응이 없음)."""
     if not ENABLE_TTS:
         return ""
     return f"""
@@ -325,7 +328,7 @@ def _build_tts_widget(accent: str) -> str:
   }}
 
   function speak() {{
-    var content = document.querySelector('.content');
+    var content = document.querySelector('{content_selector}');
     if (!content) return;
     var text = (content.innerText || content.textContent || '').trim().slice(0, 3000);
     if (!text) return;
@@ -562,17 +565,10 @@ POST_TEMPLATE = """<!DOCTYPE html>
   h1 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.4em, 5vw, 1.9em); line-height: 1.35; margin: 0 0 8px; word-break: keep-all; }}
   h2 {{ font-family: '{font_family}', 'Noto Sans KR', sans-serif; font-size: clamp(1.1em, 4vw, 1.35em); margin-top: 2em; padding: 10px 14px; background: linear-gradient(90deg, {accent}22, transparent); border-left: 5px solid {accent}; border-radius: 4px; position: relative; z-index: 1; word-break: keep-all; }}
   p {{ margin: 1em 0; position: relative; z-index: 1; }}
-  .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1.2em 0 0.4em; border-radius: 8px; border: 1px solid #eee; }}
   table {{ width: 100%; min-width: 460px; border-collapse: collapse; font-size: 0.92em; }}
   th, td {{ padding: 11px 14px; border-bottom: 1px solid #eee; text-align: left; line-height: 1.5; }}
   th {{ background: {accent}14; font-weight: 800; color: #111; white-space: nowrap; }}
   tr:last-child td {{ border-bottom: none; }}
-  .table-zoom-btn {{ display: block; margin: 0 0 1.2em; text-align: right; }}
-  .table-zoom-btn button {{ border: none; background: none; color: {accent}; font-size: 0.85em; font-weight: 700; cursor: pointer; padding: 4px 2px; }}
-  .table-modal {{ display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }}
-  .table-modal-inner {{ background: #fff; border-radius: 12px; padding: 18px; max-width: 95vw; max-height: 88vh; overflow: auto; }}
-  .table-modal-inner table {{ min-width: 420px; font-size: 1em; }}
-  .table-modal-close {{ display: block; margin: 0 0 10px auto; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 1em; cursor: pointer; }}
   a.back {{ display: inline-block; margin: 20px 0; color: {accent}; text-decoration: none; font-weight: 700; position: relative; z-index: 1; }}
   .meta {{ color: #999; font-size: 0.85em; margin-bottom: 4px; }}
   .related {{ margin-top: 60px; padding-top: 24px; border-top: 2px solid #eee; }}
@@ -1245,28 +1241,46 @@ def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
 def enhance_tables(html_body: str, accent: str) -> str:
     """본문 안의 모든 <table>을 (1) 가로 스크롤 가능한 컨테이너 + (2) '표 크게 보기' 버튼으로
     감쌉니다. 버튼을 누르면 같은 표를 화면 중앙에 큼직하게 띄워주는 모달이 열립니다.
-    <button onclick="...">만 사용해서(=javascript: 링크 미사용) 콘텐츠 필터가 엄격한
-    환경(일부 블로거 테마 등)에서도 제거될 가능성을 최소화했습니다."""
+    전부 인라인 스타일(style="...")과 <button onclick="...">만 사용합니다.
+    → CSS 클래스(<style> 태그 규칙)에 의존하면 블로거처럼 본문 내용만 전달되고
+    <head>의 <style>은 전달되지 않는 환경에서 스타일이 통째로 사라지는 문제가 있었습니다
+    (표가 안 잘리고 그냥 스크롤 없이 좁게 눌린 채로 나오거나, 모달이 숨겨지지 않고
+    본문 중간에 표가 그대로 중복 출력되는 형태로 나타남). 인라인 스타일은 이 문제가 없습니다."""
     counter = {"n": 0}
 
     def wrap_table(match):
         counter["n"] += 1
         uid = f"tblzoom{counter['n']}_{random.randint(1000, 9999)}"
         table_html = match.group(0)
+        # 표 자체에도 최소 너비를 인라인으로 강제해서 좁은 화면에서 억지로 눌리지 않게 함
+        styled_table = re.sub(
+            r"<table(?![^>]*style=)", '<table style="width:100%;min-width:460px;border-collapse:collapse;"', table_html, count=1,
+        )
+        modal_table = re.sub(
+            r"<table(?![^>]*style=)", '<table style="width:100%;min-width:420px;border-collapse:collapse;"', table_html, count=1,
+        )
         return (
-            f'<div class="table-scroll">{table_html}</div>'
-            f'<div class="table-zoom-btn"><button type="button" '
-            f'onclick="document.getElementById(\'{uid}\').style.display=\'flex\';">🔍 표 크게 보기</button></div>'
-            f'<div id="{uid}" class="table-modal" '
+            f'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:1.2em 0 0.4em;'
+            f'border-radius:8px;border:1px solid #eee;">{styled_table}</div>'
+            f'<div style="text-align:right;margin:0 0 1.2em;">'
+            f'<button type="button" onclick="document.getElementById(\'{uid}\').style.display=\'flex\';" '
+            f'style="border:none;background:none;color:{accent};font-size:0.85em;font-weight:700;'
+            f'cursor:pointer;padding:4px 2px;">🔍 표 크게 보기</button></div>'
+            f'<div id="{uid}" '
+            f'style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);'
+            f'z-index:1000;align-items:center;justify-content:center;padding:16px;" '
             f'onclick="if(event.target===this){{this.style.display=\'none\';}}">'
-            f'<div class="table-modal-inner">'
-            f'<button type="button" class="table-modal-close" '
-            f'onclick="document.getElementById(\'{uid}\').style.display=\'none\';">✕</button>'
-            f'{table_html}'
+            f'<div style="background:#fff;border-radius:12px;padding:18px;max-width:95vw;max-height:88vh;overflow:auto;">'
+            f'<button type="button" onclick="document.getElementById(\'{uid}\').style.display=\'none\';" '
+            f'style="display:block;margin:0 0 10px auto;width:32px;height:32px;border-radius:50%;'
+            f'border:none;background:#f0f0f0;font-size:1em;cursor:pointer;">✕</button>'
+            f'{modal_table}'
             f'</div></div>'
         )
 
     return re.sub(r"<table.*?</table>", wrap_table, html_body, flags=re.DOTALL)
+
+
 
 
 def insert_content_image(article: dict, slug: str) -> dict:
@@ -1737,10 +1751,13 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
 
         content_html = (
             f'{_translate_widget()}'
+            f'<div id="blogger-tts-content">'
             f'<img src="{img_src}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
             f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
             f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
             f'{_make_blogger_safe_html(article["html_body"])}'
+            f'</div>'
+            f'{_build_tts_widget(theme["accent"], content_selector="#blogger-tts-content")}'
             f'<script type="application/ld+json">{blogger_json_ld}</script>'
         )
 
