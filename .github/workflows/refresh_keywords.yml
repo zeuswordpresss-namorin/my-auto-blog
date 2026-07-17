@@ -1,15 +1,12 @@
-name: 주간 키워드 자동 보충 (구글 트렌드 1~7위)
-
-# 매주 월요일 아침에 구글 트렌드(대한민국) 상위 7개를 keywords_queue.json에 자동으로 채워 넣습니다.
-# 이렇게 하면 "대기 중인 키워드가 없습니다" 오류 없이 자동 블로그 발행이 계속 이어집니다.
+name: 주간 키워드 자동 보충 및 스코어링 시스템
 
 on:
-  workflow_dispatch: {}   # 필요하면 수동으로도 즉시 실행 가능 (Actions 탭 > Run workflow)
+  workflow_dispatch: {}   # GitHub Actions 탭에서 수동으로 즉시 실행 가능
   schedule:
-    - cron: "0 22 * * 0"  # 매주 일요일 UTC 22:00 = 한국시간 매주 월요일 오전 7시
+    - cron: "0 22 * * 0"  # 매주 일요일 UTC 22:00 = 한국 시간 매주 월요일 오전 7시
 
 permissions:
-  contents: write
+  contents: write         # 갱신된 JSON 파일을 저장소에 push하기 위한 권한
 
 jobs:
   refresh:
@@ -18,21 +15,34 @@ jobs:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
 
-      - name: 파이썬 설치
+      - name: 파이썬 환경 설정
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"    # 패키지 캐싱으로 실행 속도 최적화
 
       - name: 필요 패키지 설치
-        run: pip install requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: 구글 트렌드 상위 7개로 키워드 큐 보충
+      - name: 키워드 수집 및 종합 스코어링 실행
         run: python refresh_keywords.py
+        env:
+          PYTHONIOENCODING: "utf-8" # UTF-8 완전 지원을 위한 환경변수 설정
 
-      - name: 변경사항 커밋 및 push
+      - name: 변경사항 커밋 및 Push
         run: |
           git config user.name "auto-blog-bot"
           git config user.email "auto-blog-bot@users.noreply.github.com"
+          
+          # 파일이 없거나 예외로 인해 비어있을 경우를 대비해 큐 파일 상태 확인
           git add keywords_queue.json
-          git diff --cached --quiet && echo "변경사항 없음, 커밋 생략" || git commit -m "주간 키워드 자동 보충 ($(date +'%Y-%m-%d'))"
-          git push
+          
+          # 변경 사항이 존재할 때만 커밋을 수행하여 에러 방지
+          if git diff --cached --quiet; then
+            echo "변경사항이 없으므로 커밋을 생략합니다."
+          else
+            git commit -m "🤖 자동화: 주간 최적화 키워드 큐 갱신 ($(date +'%Y-%m-%d'))"
+            git push
+          fi
