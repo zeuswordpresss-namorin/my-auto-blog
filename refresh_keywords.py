@@ -33,16 +33,15 @@ HIGH_CPC_DATABASE = {
 }
 
 # ==========================================
-# 2. 키워드 수집 모듈 (Sources) - 워닝 제거 버전
+# 2. 키워드 수집 모듈 (Sources)
 # ==========================================
 class KeywordCollector:
     def __init__(self):
-        # GitHub Actions 환경에서 상시 404를 유발하는 pytrends 객체 선언부를 제거하고,
-        # 처음부터 100% 성공하는 안전한 RSS 트렌드 수집 방식으로 고정하여 워닝을 원천 차단합니다.
+        # GitHub Actions 환경에서 404를 유발하는 객체를 배제하고, RSS 트렌드 방식으로 안전하게 수집합니다.
         self.rss_url = "https://trends.google.co.kr/trending/rss?geo=KR"
 
     def fetch_google_trending(self):
-        """인기 검색어 수집 (워닝 없이 RSS 피드 주소로 다이렉트 안정적 수집)"""
+        """인기 검색어 수집 (RSS 피드로 안정적 수집)"""
         keywords = set()
         
         try:
@@ -71,7 +70,6 @@ class KeywordCollector:
                                 
                 logger.info(f"구글 RSS 및 연관 검색어 수집 완료! (총 {len(keywords)}개 핵심 단어 확보)")
             else:
-                # 에러 상황도 안내 로그(INFO)로 처리하여 노란색 워닝창 활성화를 방지합니다.
                 logger.info(f"구글 RSS 피드 연결 확인 필요 (상태 코드: {response.status_code})")
         except Exception as rss_err:
             logger.info(f"데이터 파싱 흐름 제어 알림: {rss_err}")
@@ -97,7 +95,6 @@ class KeywordCollector:
                         keywords.update(result[1])
                 time.sleep(random.uniform(0.5, 1.2))
             except Exception:
-                # 수집 과정의 지연 오류 등은 로그를 남기지 않고 유연하게 스킵합니다.
                 pass
         return keywords
 
@@ -137,24 +134,30 @@ class KeywordScorer:
 # 5. 메인 컨트롤러 파이프라인 (Main)
 # ==========================================
 def main():
-    logger.info("🚀 키워드 갱신 파이프라인 프로세스 시작")
+    logger.info("🚀 주간 키워드 자동 보충 파이프라인 시작")
     
     existing_data = []
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 existing_data = json.load(f)
-            logger.info(f"기존 파일에서 {len(existing_data)}개의 키워드를 불러왔습니다.")
+                if not isinstance(existing_data, list):
+                    existing_data = []
+            logger.info(f"기존 파일에서 {len(existing_data)}개의 대기 키워드를 확인했습니다.")
         except Exception:
-            pass
+            logger.info("기존 큐 파일이 비어있거나 손상되어 새로 생성합니다.")
+            existing_data = []
 
     try:
         collector = KeywordCollector()
         raw_keywords = collector.fetch_google_trending()
         extended_keywords = collector.fetch_autocomplete(raw_keywords)
+        
+        # 모든 수집 키워드 결합 후 필터링
         total_raw = raw_keywords.union(extended_keywords)
         filtered_keywords = KeywordFilter.clean_and_validate(total_raw)
         
+        # 점수 계산 및 정렬
         scored_list = []
         for kw in filtered_keywords:
             score = KeywordScorer.calculate_score(kw)
@@ -164,17 +167,29 @@ def main():
                 "length": len(kw)
             })
             
+        # 고점수 순으로 정렬
         scored_list = sorted(scored_list, key=lambda x: x["score"], reverse=True)
         
-        if scored_list:
+        # 🌟 워크플로우 목적에 맞게 최상위 핵심 키워드 7개만 추출
+        top_7_keywords = scored_list[:7]
+        
+        if top_7_keywords:
+            # 기존 대기열 뒤에 추가하는 방식이 아니라 주간 새로고침(Refresh) 개념이므로 새로 덮어씁니다.
+            # (만약 누적을 원하시면 top_7_keywords + existing_data 형태로 구성할 수 있습니다.)
             with open(DATA_FILE, "w", encoding="utf-8") as f:
-                json.dump(scored_list, f, ensure_ascii=False, indent=4)
-            logger.info(f"🎉 성공! {len(scored_list)}개의 최적화 키워드가 '{DATA_FILE}'에 반영되었습니다.")
+                json.dump(top_7_keywords, f, ensure_ascii=False, indent=4)
+            
+            logger.info("🎯 주간 상위 키워드 7개 추출 완료:")
+            for idx, item in enumerate(top_7_keywords, 1):
+                logger.info(f"  {idx}위: {item['keyword']} (점수: {item['score']})")
+                
+            logger.info(f"🎉 성공! {len(top_7_keywords)}개의 최적화 키워드가 '{DATA_FILE}'에 반영되었습니다.")
         else:
-            logger.info("수집된 신규 키워드가 데이터가 없어 기존 파일을 보존합니다.")
+            logger.info("수집 및 필터링된 신규 키워드가 없어 기존 파일을 유지합니다.")
             
     except Exception as e:
         logger.info(f"파이프라인 제어 흐름 알림: {e}")
 
 if __name__ == "__main__":
     main()
+
