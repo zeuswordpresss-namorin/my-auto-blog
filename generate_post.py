@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.1 - 구글 블로거 오류 수정 및 보완판)
+GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.2 - 구글 블로거 OAuth 토큰 갱신 오류 디버깅 보완판)
 """
 
 import base64
@@ -865,16 +865,23 @@ def _fetch_illustration(category: str, size: tuple, seed: int):
         f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
         f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
     )
-    try:
-        resp = requests.get(url, timeout=20)
-        resp.raise_for_status()
-        img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
-        if img.size != size:
-            img = img.resize(size)
-        return img
-    except Exception as e:
-        print(f"  → [일러스트] 생성 실패, 그라데이션만 사용: {e}")
-        return None
+    
+    # [보완] 네트워크 타임아웃 오류 방지를 위해 타임아웃을 40초로 늘리고 3회 재시도 구현
+    for attempt in range(1, 4):
+        try:
+            resp = requests.get(url, timeout=40)
+            resp.raise_for_status()
+            img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+            if img.size != size:
+                img = img.resize(size)
+            return img
+        except Exception as e:
+            print(f"  → [일러스트] 생성 시도 {attempt}/3 실패: {e}")
+            if attempt < 3:
+                time.sleep(3)
+    
+    print("  → [일러스트] 최종 실패, 그라데이션만 사용합니다.")
+    return None
 
 
 def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
@@ -1145,16 +1152,23 @@ def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
         f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
         f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
     )
-    try:
-        resp = requests.get(url, timeout=20)
-        resp.raise_for_status()
-        img = Image.open(io.BytesIO(resp.content)).convert("RGB")
-        if img.size != size:
-            img = img.resize(size)
-        return img
-    except Exception as e:
-        print(f"  → [본문 이미지] 생성 실패, 삽입 건너뜀: {e}")
-        return None
+    
+    # [보완] 네트워크 지연 극복을 위한 재시도 및 대기 추가
+    for attempt in range(1, 4):
+        try:
+            resp = requests.get(url, timeout=30)
+            resp.raise_for_status()
+            img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+            if img.size != size:
+                img = img.resize(size)
+            return img
+        except Exception as e:
+            print(f"  → [본문 이미지] 시도 {attempt}/3 실패: {e}")
+            if attempt < 3:
+                time.sleep(3)
+                
+    print("  → [본문 이미지] 생성 실패로 본문 삽입을 생략합니다.")
+    return None
 
 
 def enhance_tables(html_body: str, accent: str) -> str:
@@ -1594,7 +1608,7 @@ def update_seo_files(posts: list) -> None:
 
 
 # ---------------------------------------------------------------------
-# 구글 블로거(Blogger) 동시 발행 - v4.1 (오류 수정 업데이트)
+# 구글 블로거(Blogger) 동시 발행 - v4.2 (디버깅 강화 및 예외 처리 완벽판)
 # ---------------------------------------------------------------------
 
 def _blogger_configured() -> bool:
@@ -1602,18 +1616,25 @@ def _blogger_configured() -> bool:
 
 
 def _get_blogger_access_token() -> str:
-    resp = requests.post(
-        "https://oauth2.googleapis.com/token",
-        data={
-            "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "refresh_token": GOOGLE_REFRESH_TOKEN,
-            "grant_type": "refresh_token",
-        },
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json()["access_token"]
+    # [수정] 400 Client Error 발생 시 구글 서버가 주는 원인 문자열(예: invalid_grant)을 로그에 정교하게 남김
+    try:
+        resp = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "refresh_token": GOOGLE_REFRESH_TOKEN,
+                "grant_type": "refresh_token",
+            },
+            timeout=20,
+        )
+        if resp.status_code != 200:
+            print(f"  → [OAuth2 갱신 실패 상세]: {resp.text}")
+        resp.raise_for_status()
+        return resp.json()["access_token"]
+    except Exception as e:
+        print(f"  → [OAuth2] 구글 인증서버에서 Access Token 갱신 요청을 거절함: {e}")
+        raise e
 
 
 def _make_blogger_safe_html(html_body: str) -> str:
@@ -1638,14 +1659,10 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
         today = datetime.now().strftime("%Y-%m-%d")
         blogger_json_ld = build_json_ld(article, canonical_url, thumb_url, today, platform="blogger")
 
-        # [수정] 대용량 Base64 이미지로 인한 블로거 API 전송 에러(Payload Too Large) 방어
-        # 썸네일 이미지를 가볍게 리사이징하고 압축률을 높여 용량을 줄인 Base64로 전송합니다.
         try:
             with Image.open(local_thumb_path) as origin_img:
-                # 가로 세로 비율 유지하며 블로거 본문용으로 적절히 리사이즈 (예: 가로 최대 800px)
                 origin_img.thumbnail((800, 450))
                 buffered = io.BytesIO()
-                # webp 포맷으로 최적화 압축하여 바이트 생성
                 origin_img.save(buffered, format="WEBP", quality=75)
                 img_b64 = base64.b64encode(buffered.getvalue()).decode("ascii")
             img_src = f"data:image/webp;base64,{img_b64}"
@@ -1669,7 +1686,6 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
         payload = {"title": article["title"], "content": content_html}
         headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
 
-        # HTTP status code 오류 디버깅 보강
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
         if resp.status_code != 200:
             print(f"  → [블로거 API 오류 응답]: {resp.text}")
@@ -1678,7 +1694,7 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
         result = resp.json()
         print(f"  → [블로거] 발행 완료: {result.get('url', '(URL 확인 불가)')}")
     except Exception as e:
-        print(f"  → [블로거] 발행 실패 (GitHub Pages 발행은 정상 진행됨): {e}")
+        print(f"  → [블로거] 최종 발행 실패 (GitHub Pages 발행은 정상 완료): {e}")
 
 
 def ensure_nojekyll() -> None:
