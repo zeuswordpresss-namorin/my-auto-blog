@@ -120,7 +120,8 @@
 
 <div style="position:fixed;top:10px;right:10px;z-index:999;">
   <button onclick="var e=document.getElementById('gt-box');e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none';"
-    style="width:38px;height:38px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:17px;cursor:pointer;line-height:1;">🌐</button>
+    style="border:none;border-radius:999px;background:#fff;color:#333;font-weight:700;font-size:12px;
+    padding:9px 14px;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">번역</button>
   <div id="gt-box" style="display:none;margin-top:6px;background:#fff;padding:6px 8px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.18);">
     <div id="google_translate_element"></div>
   </div>
@@ -134,57 +135,93 @@ function googleTranslateElementInit() {
 
 <div style="position:fixed;bottom:20px;right:20px;z-index:998;">
   <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
-    style="width:50px;height:50px;border-radius:50%;border:none;background:#4a90d9;color:#fff;
-    font-size:20px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">🔊</button>
+    style="border:none;border-radius:999px;background:#4a90d9;color:#fff;font-weight:700;
+    font-size:13px;padding:10px 16px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">듣기</button>
 </div>
 <script>
 (function() {
-  var synth = window.speechSynthesis;
-  if (!synth) return;
   var speaking = false;
-
-  function pickVoice() {
-    var voices = synth.getVoices() || [];
-    var ko = voices.filter(function(v) { return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; });
-    var female = ko.filter(function(v) { return /female|여성|유나|보라|서연|지민/i.test(v.name); });
-    return female[0] || ko[0] || null;
-  }
+  var currentAudio = null;
+  var chunkQueue = [];
+  var chunkIndex = 0;
+  var TTS_ENDPOINT = 'https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=';
 
   function updateBtn() {
     var btn = document.getElementById('tts-btn');
-    if (btn) btn.textContent = speaking ? '⏸️' : '🔊';
+    if (btn) btn.textContent = speaking ? '정지' : '듣기';
   }
 
-  function speak() {
+  function extractReadableText() {
     var content = document.querySelector('.content');
-    if (!content) return;
-    var text = (content.innerText || content.textContent || '').trim().slice(0, 3000);
-    if (!text) return;
-    var utter = new SpeechSynthesisUtterance(text);
-    var voice = pickVoice();
+    if (!content) return '';
+    var clone = content.cloneNode(true);
+    // 표는 항목이 뒤섞여 어색하게 들리므로 읽기 대상에서 제외
+    var strip = clone.querySelectorAll('table, button, script, style, .related, [id^="tblzoom"]');
+    strip.forEach(function(el) { el.remove(); });
+    return (clone.innerText || clone.textContent || '').trim();
+  }
+
+  function splitIntoChunks(text, maxLen) {
+    var chunks = [];
+    while (text.length > 0) {
+      var piece = text.slice(0, maxLen);
+      if (text.length > maxLen) {
+        var cut = Math.max(piece.lastIndexOf('.'), piece.lastIndexOf('\n'), piece.lastIndexOf('!'), piece.lastIndexOf('?'));
+        if (cut > 40) piece = text.slice(0, cut + 1);
+      }
+      chunks.push(piece);
+      text = text.slice(piece.length);
+    }
+    return chunks.slice(0, 20); // 너무 긴 글은 앞부분 위주로 (최대 약 8000자)
+  }
+
+  function stop() {
+    speaking = false;
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    updateBtn();
+  }
+
+  function playChunkWithAI(i) {
+    if (!speaking || i >= chunkQueue.length) { speaking = false; updateBtn(); return; }
+    var audio = new Audio(TTS_ENDPOINT + encodeURIComponent(chunkQueue[i]));
+    currentAudio = audio;
+    audio.onended = function() { playChunkWithAI(i + 1); };
+    audio.onerror = function() { speakWithBrowserVoice(chunkQueue.join(' ')); };
+    audio.play().catch(function() { speakWithBrowserVoice(chunkQueue.join(' ')); });
+  }
+
+  function speakWithBrowserVoice(text) {
+    var synth = window.speechSynthesis;
+    if (!synth) { speaking = false; updateBtn(); return; }
+    var voices = synth.getVoices() || [];
+    var ko = voices.filter(function(v) { return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; });
+    var female = ko.filter(function(v) { return /female|여성|유나|보라|서연|지민/i.test(v.name); });
+    var utter = new SpeechSynthesisUtterance(text.slice(0, 3000));
+    var voice = female[0] || ko[0];
     if (voice) utter.voice = voice;
     utter.lang = 'ko-KR';
     utter.rate = 0.92;
-    utter.pitch = 1.0;
     utter.onend = function() { speaking = false; updateBtn(); };
     utter.onerror = function() { speaking = false; updateBtn(); };
     synth.cancel();
     synth.speak(utter);
+  }
+
+  function speak() {
+    var text = extractReadableText();
+    if (!text) return;
     speaking = true;
     updateBtn();
+    chunkQueue = splitIntoChunks(text, 350);
+    playChunkWithAI(0);
   }
 
   window.__ttsToggle = function() {
-    if (speaking) {
-      synth.cancel();
-      speaking = false;
-      updateBtn();
-    } else {
-      speak();
-    }
+    if (speaking) { stop(); } else { speak(); }
   };
 
-  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 수동 버튼으로 대체)
+  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 "듣기" 버튼으로 수동 시작)
   setTimeout(function() {
     try { speak(); } catch (e) {}
   }, 1000);
@@ -249,10 +286,10 @@ function googleTranslateElementInit() {
 </ul>
 
 <p>캠핑은 단순한 휴식을 넘어 자연과의 교감, 소중한 사람들과의 유대감을 깊게 하는 특별한 활동입니다. 이 글에서 소개해 드린 필수 캠핑 용품 추천과 선택 가이드가 여러분의 캠핑 준비에 도움이 되기를 바랍니다. 자신에게 맞는 장비를 현명하게 선택하고, 항상 안전과 환경을 최우선으로 생각하는 책임감 있는 캠퍼가 되어 즐거운 추억을 많이 만드시길 응원합니다.</p><h2>관련 추천 상품</h2><p><a href="https://www.coupang.com/np/search?q=%EC%BA%A0%ED%95%91%20%EC%9A%A9%ED%92%88%20%EC%B6%94%EC%B2%9C" target="_blank" rel="nofollow sponsored">캠핑 용품 추천 관련 인기 상품 보러가기</a></p><p style="font-size:0.85em;color:#888;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-<div class="post-nav"><a href="../posts/티센크루프-마린-시스템-2026-07-16.html"><img src="../thumbs/티센크루프-마린-시스템-2026-07-16.webp" alt="이전 게시물"><span>← 이전 게시물: 티센크루프 마린 시스템: 글로벌 해양 방위 산업의 핵심</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
-<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/티센크루프-마린-시스템-2026-07-16.html"><img src="../thumbs/티센크루프-마린-시스템-2026-07-16.webp" alt="티센크루프 마린 시스템: 글로벌 해양 방위 산업의 핵심" loading="lazy"><span>티센크루프 마린 시스템: 글로벌 해양 방위 산업의 핵심</span></a>
-<a class="related-card" href="../posts/로스앤젤레스-다저스-2026-07-16.html"><img src="../thumbs/로스앤젤레스-다저스-2026-07-16.webp" alt="로스앤젤레스 다저스: 명문 구단의 역사와 현재" loading="lazy"><span>로스앤젤레스 다저스: 명문 구단의 역사와 현재</span></a>
-<a class="related-card" href="../posts/리플-2026-07-15.html"><img src="../thumbs/리플-2026-07-15.webp" alt="리플(XRP) 코인 특징 활용 전망 투자 유의사항" loading="lazy"><span>리플(XRP) 코인 특징 활용 전망 투자 유의사항</span></a></div></div>
+<div class="post-nav"><a href="../posts/서킷브레이커-2026-07-17.html"><img src="../thumbs/서킷브레이커-2026-07-17.webp" alt="이전 게시물"><span>← 이전 게시물: 서킷브레이커 뜻, 발동 조건 그리고 투자자 유의사항</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
+<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/서킷브레이커-2026-07-17.html"><img src="../thumbs/서킷브레이커-2026-07-17.webp" alt="서킷브레이커 뜻, 발동 조건 그리고 투자자 유의사항" loading="lazy"><span>서킷브레이커 뜻, 발동 조건 그리고 투자자 유의사항</span></a>
+<a class="related-card" href="../posts/별자리-2026-07-17.html"><img src="../thumbs/별자리-2026-07-17.webp" alt="밤하늘 별자리 종류 특징 신화 이야기 완벽 가이드" loading="lazy"><span>밤하늘 별자리 종류 특징 신화 이야기 완벽 가이드</span></a>
+<a class="related-card" href="../posts/티센크루프-마린-시스템-2026-07-16.html"><img src="../thumbs/티센크루프-마린-시스템-2026-07-16.webp" alt="티센크루프 마린 시스템: 글로벌 해양 방위 산업의 핵심" loading="lazy"><span>티센크루프 마린 시스템: 글로벌 해양 방위 산업의 핵심</span></a></div></div>
 
 </div>
 </body>
