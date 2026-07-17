@@ -1,93 +1,77 @@
 # -*- coding: utf-8 -*-
-"""
-구글 트렌드(대한민국) 일일 인기 검색어 1~7위를 가져와서
-keywords_queue.json의 "pending" 목록에 자동으로 채워 넣습니다.
-
-데이터 출처: 구글이 공식 제공하는 트렌드 RSS 피드
-  https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR
-(별도 API 키 필요 없음, 무료, 스크래핑이 아니라 구글이 직접 제공하는 공식 피드)
-
-동작:
-  1. RSS 피드에서 상위 7개 키워드 추출
-  2. 이미 완료(completed)됐거나 대기 중(pending)인 키워드는 제외 (중복 방지)
-  3. 새 키워드만 pending 목록 뒤에 추가
-  4. keywords_queue.json 저장 (실제 git commit/push는 워크플로 파일이 담당)
-
-실행: python refresh_keywords.py
-자동화: .github/workflows/refresh_keywords.yml 이 매주 자동 실행합니다.
-"""
-
 import json
 import os
-import xml.etree.ElementTree as ET
-
-import requests
-
-QUEUE_FILE = "keywords_queue.json"
-# 구글이 트렌드 서비스 주소를 개편하면서 RSS 경로가 바뀌었습니다.
-# 최신 주소를 우선 시도하고, 혹시 또 바뀌면 예전 주소로 한 번 더 시도합니다.
-TRENDS_RSS_URLS = [
-    "https://trends.google.com/trending/rss?geo=KR",
-    "https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR",  # 예전 주소 (혹시 몰라 대비용)
-]
-TOP_N = 7
-
-
-def fetch_top_trends(n: int = TOP_N) -> list[str]:
-    """구글 트렌드 RSS에서 상위 n개 키워드를 가져옵니다. 여러 주소를 순서대로 시도합니다."""
-    last_error = None
-    for url in TRENDS_RSS_URLS:
-        try:
-            resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-            resp.raise_for_status()
-            root = ET.fromstring(resp.content)
-            titles = [item.findtext("title") for item in root.iter("item")]
-            titles = [t.strip() for t in titles if t and t.strip()]
-            if titles:
-                print(f"  → 사용된 주소: {url}")
-                return titles[:n]
-            last_error = f"{url} 응답은 성공했지만 키워드가 비어있음"
-        except Exception as e:
-            last_error = f"{url} 실패: {e}"
-            print(f"  → {last_error}")
-
-    raise RuntimeError(f"모든 트렌드 주소에서 가져오기 실패. 마지막 오류: {last_error}")
-
+from config import QUEUE_FILE_PATH
+import keyword_sources
+import keyword_filters
+import keyword_scoring
 
 def load_queue() -> dict:
-    if not os.path.exists(QUEUE_FILE):
-        return {"pending": [], "completed": []}
-    with open(QUEUE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
+    """큐 파일을 읽어옵니다. 파일이 없거나 깨졌다면 요구 사양 구조를 리턴합니다."""
+    default_structure = {"pending": [], "completed": []}
+    if not os.path.exists(QUEUE_FILE_PATH):
+        return default_structure
+    try:
+        with open(QUEUE_FILE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if "pending" in data and "completed" in data:
+                return data
+            return default_structure
+    except Exception:
+        return default_structure
 
 def save_queue(queue: dict) -> None:
-    with open(QUEUE_FILE, "w", encoding="utf-8") as f:
+    """큐 파일을 UTF-8 안전 포맷으로 저장합니다."""
+    with open(QUEUE_FILE_PATH, "w", encoding="utf-8") as f:
         json.dump(queue, f, ensure_ascii=False, indent=2)
 
-
-def run():
-    print("[구글 트렌드] 대한민국 일일 인기 검색어 가져오는 중...")
-    trends = fetch_top_trends()  # 실패하면 예외가 발생해 Actions에서 빨간 X로 명확히 표시됨
-
-    print(f"[구글 트렌드] 상위 {len(trends)}개: {trends}")
-
+def run_pipeline():
+    print("[시스템] 키워드 파이프라인 가동...")
+    
+    # 1. 기존 데이터 로드
     queue = load_queue()
-    existing = set(queue.get("pending", [])) | set(queue.get("completed", []))
-
-    new_keywords = [t for t in trends if t not in existing]
-    skipped = len(trends) - len(new_keywords)
-
-    queue.setdefault("pending", []).extend(new_keywords)
+    existing_keywords = set(queue["pending"]) | set(queue["completed"])
+    
+    # 2. 소스로부터 날 것의 데이터 수집
+    trends = keyword_sources.fetch_google_trends()
+    autocompletes = keyword_sources.fetch_google_autocomplete(trends)
+    
+    # 3. 데이터 통합 및 분석/필터/정규화/스코어링
+    candidates = {}
+    
+    # 트렌드 키워드 반영
+    for idx, kw in enumerate(trends):
+        norm_kw = keyword_filters.normalize_keyword(kw)
+        if keyword_filters.is_valid_keyword(norm_kw) and norm_kw not in existing_keywords:
+            candidates[norm_kw] = {"rank_idx": idx, "is_trend": True, "is_auto": False}
+            
+    # 자동완성 키워드 병합 및 반영
+    for kw in autocompletes:
+        norm_kw = keyword_filters.normalize_keyword(kw)
+        if keyword_filters.is_valid_keyword(norm_kw) and norm_kw not in existing_keywords:
+            if norm_kw in candidates:
+                candidates[norm_kw]["is_auto"] = True
+            else:
+                candidates[norm_kw] = {"rank_idx": 99, "is_trend": False, "is_auto": True}
+                
+    # 4. 종합 스코어링 및 정렬
+    scored_list = []
+    for kw, info in candidates.items():
+        score = keyword_scoring.calculate_total_score(
+            kw, info["rank_idx"], info["is_trend"], info["is_auto"]
+        )
+        scored_list.append((kw, score))
+        
+    # 점수 높은 순 정렬
+    scored_list.sort(key=lambda x: x[1], reverse=True)
+    new_sorted_keywords = [item[0] for item in scored_list]
+    
+    # 5. 큐에 결합 및 저장
+    queue["pending"].extend(new_sorted_keywords)
     save_queue(queue)
-
-    print(f"[완료] 새로 추가된 키워드 {len(new_keywords)}개 (중복 제외 {skipped}개)")
-    print(f"[완료] 현재 대기 중인 키워드 총 {len(queue['pending'])}개")
-
+    
+    print(f"[완료] 새롭게 필터링/스코어링되어 추가된 키워드: {new_sorted_keywords}")
+    print(f"[결과] 현재 pending 큐 수량: {len(queue['pending'])}개")
 
 if __name__ == "__main__":
-    try:
-        run()
-    except Exception as e:
-        print(f"[오류] {e}")
-        raise SystemExit(1)
+    run_pipeline()
