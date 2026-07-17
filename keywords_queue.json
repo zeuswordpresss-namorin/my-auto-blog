@@ -1,52 +1,52 @@
 [
     {
+        "keyword": "프랑스 잉글랜드",
+        "score": 84.0,
+        "length": 8
+    },
+    {
+        "keyword": "t1 한화",
+        "score": 77.0,
+        "length": 5
+    },
+    {
         "keyword": "더중앙플러스",
-        "score": 78.0,
+        "score": 77.0,
         "length": 6
     },
     {
         "keyword": "김송",
-        "score": 69.0,
-        "length": 2
-    },
-    {
-        "keyword": "al",
-        "score": 67.0,
+        "score": 76.0,
         "length": 2
     },
     {
         "keyword": "김부장 드라마",
-        "score": 66.0,
+        "score": 72.0,
         "length": 7
     },
     {
-        "keyword": "백령도",
-        "score": 66.0,
-        "length": 3
-    },
-    {
         "keyword": "오은영 리포트 - 결혼지옥",
-        "score": 65.0,
+        "score": 63.0,
         "length": 14
     },
     {
-        "keyword": "아덴 만",
-        "score": 64.0,
-        "length": 4
-    },
-    {
-        "keyword": "t1 hle",
-        "score": 57.0,
-        "length": 6
-    },
-    {
-        "keyword": "젠지",
-        "score": 55.0,
+        "keyword": "al",
+        "score": 62.0,
         "length": 2
     },
     {
-        "keyword": "sbs",
-        "score": 55.0,
+        "keyword": "백령도",
+        "score": 56.0,
         "length": 3
+    },
+    {
+        "keyword": "아덴 만",
+        "score": 50.0,
+        "length": 4
+    },
+    {
+        "keyword": "도란",
+        "score": 50.0,
+        "length": 2
     }
 ]
