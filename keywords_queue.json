@@ -1,52 +1,52 @@
 [
     {
-        "keyword": "젠지",
-        "score": 85.0,
+        "keyword": "더중앙플러스",
+        "score": 78.0,
+        "length": 6
+    },
+    {
+        "keyword": "김송",
+        "score": 69.0,
         "length": 2
     },
     {
-        "keyword": "김상혁",
-        "score": 83.0,
+        "keyword": "al",
+        "score": 67.0,
+        "length": 2
+    },
+    {
+        "keyword": "김부장 드라마",
+        "score": 66.0,
+        "length": 7
+    },
+    {
+        "keyword": "백령도",
+        "score": 66.0,
         "length": 3
     },
     {
         "keyword": "오은영 리포트 - 결혼지옥",
-        "score": 77.0,
+        "score": 65.0,
         "length": 14
     },
     {
-        "keyword": "성과급",
-        "score": 77.0,
-        "length": 3
-    },
-    {
-        "keyword": "김송",
-        "score": 77.0,
-        "length": 2
-    },
-    {
-        "keyword": "더중앙플러스",
-        "score": 74.0,
-        "length": 6
-    },
-    {
-        "keyword": "백령도",
-        "score": 73.0,
-        "length": 3
-    },
-    {
-        "keyword": "문샷",
-        "score": 70.0,
-        "length": 2
-    },
-    {
         "keyword": "아덴 만",
-        "score": 67.0,
+        "score": 64.0,
         "length": 4
     },
     {
-        "keyword": "김부장 드라마",
-        "score": 61.0,
-        "length": 7
+        "keyword": "t1 hle",
+        "score": 57.0,
+        "length": 6
+    },
+    {
+        "keyword": "젠지",
+        "score": 55.0,
+        "length": 2
+    },
+    {
+        "keyword": "sbs",
+        "score": 55.0,
+        "length": 3
     }
 ]
