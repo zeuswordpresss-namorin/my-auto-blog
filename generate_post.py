@@ -1,6 +1,33 @@
 # -*- coding: utf-8 -*-
 """
-GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v4.2 - 구글 블로거 OAuth 토큰 갱신 오류 디버깅 보완판)
+GitHub Actions 위에서 실행되는 자동 블로그 파이프라인 스크립트 (v3 - 업그레이드판)
+
+v2에서 추가된 것:
+  1. 쿠팡 마크업(제휴) 링크 실전 업그레이드
+     - 쿠팡파트너스 Open API(HMAC 서명) 딥링크 발급 시도
+     - API 키 미설정/실패 시 기존 태그 방식 검색 링크로 자동 대체 (항상 동작 보장)
+  2. 상위노출(SEO) 강화
+     - Open Graph / Twitter Card 메타태그, canonical URL
+     - sitemap.xml / robots.txt 매 실행마다 자동 갱신
+  3. 수익화 피드백 관리
+     - Google Analytics 4(GA4) 추적 코드 삽입 (측정 ID 설정 시)
+     - docs/dashboard.html : 지금까지 발행된 글 + 확인 링크 모음 (폰에서 보는 성과 관리 화면)
+
+v3에서 추가된 것:
+  4. AI 스키마 마크업 자동 선택
+     - Gemini가 글 내용을 보고 FAQPage / HowTo / Article 중 구글 상위노출에
+       가장 유리한 구조화 데이터 타입을 스스로 골라 JSON-LD로 생성 (수동 선택 불필요)
+  5. 구글 애드센스 자동광고 연동 (전면/앵커 광고 포함)
+     - ADSENSE_CLIENT_ID 설정 시 자동광고 스크립트 삽입, 실제 광고 형식/노출 빈도는
+       애드센스 사이트의 "자동 광고" 메뉴에서 On/Off
+  6. 대시보드에 애드센스 수익 확인 카드 추가
+
+v4에서 추가된 것 (저장소 통합):
+  7. 구글 블로거(Blogger) 동시 발행
+     - 같은 글/썸네일/스키마 마크업을 GitHub Pages뿐 아니라 Blogger 블로그에도 자동 발행
+     - OAuth 리프레시 토큰 방식이라 최초 1회만 인증하면 이후 자동 갱신됨
+     - Blogger 관련 Secrets 미설정 시 이 단계는 조용히 건너뛰고 GitHub Pages 발행은 그대로 진행
+       (별도의 "Blogger" 저장소/워크플로는 더 이상 필요 없음, 이 저장소 하나로 통합)
 """
 
 import base64
@@ -12,6 +39,7 @@ import os
 import random
 import re
 import sys
+import textwrap
 import time
 import urllib.parse
 from datetime import datetime
@@ -35,15 +63,15 @@ COUPANG_PARTNER_TAG = os.environ.get("COUPANG_PARTNER_TAG", "")
 COUPANG_ACCESS_KEY = os.environ.get("COUPANG_ACCESS_KEY", "")
 COUPANG_SECRET_KEY = os.environ.get("COUPANG_SECRET_KEY", "")
 
-# 구글 블로거 동시발행용
+# 구글 블로거 동시발행용 (최초 1회 OAuth 인증 후 자동 갱신되는 리프레시 토큰 방식)
 BLOGGER_BLOG_ID = os.environ.get("BLOGGER_BLOG_ID", "")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REFRESH_TOKEN = os.environ.get("GOOGLE_REFRESH_TOKEN", "")
 
 FONT_CANDIDATES = [
-    "font.ttf",
-    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+    "font.ttf",  # 워크플로에서 직접 다운로드하는 나눔고딕 (기본 방식)
+    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",  # apt로 설치했을 경우 대비(하위 호환)
 ]
 
 DOCS_DIR = "docs"
@@ -107,6 +135,10 @@ SYSTEM_PROMPT = """당신은 한국어 SEO 블로그 콘텐츠 작가 겸 구조
 }
 html_body는 <h2>, <p>, <table>, <ul> 등을 사용한 HTML 조각이어야 한다."""
 
+
+# =====================================================================
+# 카테고리별 트렌디 테마 - 글 주제(category)에 맞춰 자동으로 색상/폰트/뱃지가 바뀝니다
+# =====================================================================
 CATEGORY_THEMES = {
     "뷰티패션": {
         "gradient": [(255, 107, 157), (255, 154, 158), (250, 208, 196)],
@@ -198,6 +230,7 @@ def get_theme(category: str) -> dict:
     return CATEGORY_THEMES.get(category, DEFAULT_THEME)
 
 
+# 카테고리별 무료 일러스트 생성 프롬프트 (Pollinations.ai - 무료, API 키 불필요)
 ILLUSTRATION_PROMPTS = {
     "뷰티패션": "minimalist pencil sketch style illustration of cosmetics lipstick and fashion clothing items, clean line art",
     "푸드맛집": "minimalist pencil sketch style illustration of food dishes and cafe coffee items, clean line art",
@@ -214,6 +247,8 @@ ILLUSTRATION_SUFFIX = ", simple outline shapes, white background, isolated black
 
 
 def build_decor_html(theme: dict, seed: str) -> str:
+    """글 주제에 맞는 아기자기한 이모지 일러스트를 배경 빈 공간에 랜덤 배치합니다.
+    seed(글 slug)로 고정해서 같은 글은 새로고침해도 항상 같은 배치가 나옵니다."""
     rng = random.Random(seed)
     emojis = theme["decor"]
     count = rng.randint(9, 12)
@@ -242,7 +277,7 @@ def _ga_snippet() -> str:
     if not GA_MEASUREMENT_ID:
         return ""
     return f"""
-<script async src="[https://www.googletagmanager.com/gtag/js?id=](https://www.googletagmanager.com/gtag/js?id=){GA_MEASUREMENT_ID}"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){{dataLayer.push(arguments);}}
@@ -252,10 +287,22 @@ def _ga_snippet() -> str:
 
 
 ENABLE_AUTO_TRANSLATE = os.environ.get("ENABLE_AUTO_TRANSLATE", "true").strip().lower() != "false"
+
+
 ENABLE_TTS = os.environ.get("ENABLE_TTS", "true").strip().lower() != "false"
 
 
 def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
+    """상세페이지 진입 1초 후 본문(표 제외)을 자동으로 읽어주는 음성 안내 기능을 삽입합니다.
+    1순위로 무료 공개 TTS 엔드포인트(StreamElements, 아마존 폴리 '서연' 음성 - 브라우저 기본
+    음성보다 훨씬 자연스러운 사람 목소리에 가까움, API 키 불필요)를 사용하고, 실패하면
+    브라우저 내장 음성합성(Web Speech API)으로 자동 전환됩니다. 표는 그대로 읽으면 항목이
+    뒤섞여 어색하게 들리기 때문에 읽기 대상에서 제외합니다.
+    버튼 아이콘은 이모지 대신 한글 텍스트("듣기"/"정지")를 씁니다 — 일부 환경(블로거 발행 시
+    콘텐츠 처리 과정)에서 이모지가 깨진 문자로 표시되는 문제가 있어 안전하게 텍스트로 대체했습니다.
+    content_selector: 실제로 읽어야 할 본문 요소를 가리키는 CSS 선택자. GitHub Pages 페이지는
+    본문이 <div class="content">로 감싸여 있지만, 블로거는 그런 래퍼가 없어서 발행할 때
+    별도 id를 만들어 넘겨줘야 합니다 (안 그러면 아무것도 못 찾아서 조용히 아무 반응이 없음)."""
     if not ENABLE_TTS:
         return ""
     return f"""
@@ -270,7 +317,7 @@ def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
   var currentAudio = null;
   var chunkQueue = [];
   var chunkIndex = 0;
-  var TTS_ENDPOINT = '[https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=](https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=)';
+  var TTS_ENDPOINT = 'https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=';
 
   function updateBtn() {{
     var btn = document.getElementById('tts-btn');
@@ -281,6 +328,7 @@ def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
     var content = document.querySelector('{content_selector}');
     if (!content) return '';
     var clone = content.cloneNode(true);
+    // 표는 항목이 뒤섞여 어색하게 들리므로 읽기 대상에서 제외
     var strip = clone.querySelectorAll('table, button, script, style, .related, [id^="tblzoom"]');
     strip.forEach(function(el) {{ el.remove(); }});
     return (clone.innerText || clone.textContent || '').trim();
@@ -297,7 +345,7 @@ def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
       chunks.push(piece);
       text = text.slice(piece.length);
     }}
-    return chunks.slice(0, 20);
+    return chunks.slice(0, 20); // 너무 긴 글은 앞부분 위주로 (최대 약 8000자)
   }}
 
   function stop() {{
@@ -333,10 +381,20 @@ def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
     synth.speak(utter);
   }}
 
+  function speak() {{
+    var text = extractReadableText();
+    if (!text) return;
+    speaking = true;
+    updateBtn();
+    chunkQueue = splitIntoChunks(text, 350);
+    playChunkWithAI(0);
+  }}
+
   window.__ttsToggle = function() {{
     if (speaking) {{ stop(); }} else {{ speak(); }}
   }};
 
+  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 "듣기" 버튼으로 수동 시작)
   setTimeout(function() {{
     try {{ speak(); }} catch (e) {{}}
   }}, 1000);
@@ -344,7 +402,13 @@ def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
 </script>"""
 
 
+
 def _translate_widget() -> str:
+    """구글 번역 위젯(무료, API 키 불필요)을 삽입합니다.
+    첫 화면에는 작은 "번역" 버튼만 보이고, 탭하면 그때 번역 선택창이 펼쳐집니다
+    (구글이 기본으로 보여주는 큰 배너는 autoDisplay:false로 꺼둠).
+    아이콘은 지구본 이모지 대신 한글 텍스트를 씁니다 — 일부 환경(블로거 발행 시 콘텐츠 처리
+    과정)에서 이모지가 깨진 문자로 표시되는 문제가 있어 안전하게 텍스트로 대체했습니다."""
     if not ENABLE_AUTO_TRANSLATE:
         return ""
     return """
@@ -361,19 +425,29 @@ function googleTranslateElementInit() {
   new google.translate.TranslateElement({pageLanguage: 'ko', autoDisplay: false}, 'google_translate_element');
 }
 </script>
-<script src="//[translate.google.com/translate_a/element.js?cb=googleTranslateElementInit](https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit)"></script>"""
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>"""
 
 
 def _adsense_snippet() -> str:
+    """구글 애드센스 자동광고 스크립트. 이 한 줄만 있으면 배너/전면(interstitial)/앵커 광고를
+    구글이 페이지 내용에 맞게 자동으로 배치합니다 (실제 On/Off 및 광고 형식 세부설정은
+    애드센스 사이트의 '자동 광고' 메뉴에서 합니다)."""
     if not ADSENSE_CLIENT_ID:
         return ""
     return (
-        f'\n<script async src="[https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js](https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js)'
+        f'\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
         f'?client={ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>'
     )
 
 
 def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
+    """AI의 자유 서식(표 등)에 의존하지 않고 구조화된 faq_items 데이터로
+    질문/답변을 클릭하면 펼쳐지는 아코디언 카드로 직접 렌더링합니다. faq_items가 있으면
+    schema_type과 무관하게 항상 렌더링합니다 (AI가 스키마 타입 판단과 별개로 Q&A를 채운 경우 대비).
+    <details>/<summary>는 브라우저 네이티브 기능이라 별도 JS 없이도 클릭-확장이 동작하고,
+    전부 인라인 스타일(style="...")을 사용해서 <style> 태그가 제거되는 환경(일부 블로거 테마)
+    에서도 레이아웃이 깨지지 않습니다. 질문은 굵게, 답변은 일반체로 굵기를 다르게 줘서
+    시각적으로 확실히 구분됩니다."""
     if not article.get("faq_items"):
         return ""
 
@@ -399,6 +473,8 @@ def build_faq_section_html(article: dict, accent: str = "#4a90d9") -> str:
 
 
 def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, platform: str = "github") -> str:
+    """AI가 고른 스키마 타입(schema_type)에 맞춰 JSON-LD 구조화 데이터를 만듭니다.
+    platform="blogger"면 일반 Article 대신 BlogPosting 타입을 사용합니다 (블로그 플랫폼 권장 스키마)."""
     schema_type = article.get("schema_type", "Article")
     title = article["title"]
     meta_description = article.get("meta_description", "")
@@ -406,7 +482,7 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
 
     if schema_type == "FAQPage" and article.get("faq_items"):
         data = {
-            "@context": "[https://schema.org](https://schema.org)",
+            "@context": "https://schema.org",
             "@type": "FAQPage",
             "mainEntity": [
                 {
@@ -419,7 +495,7 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
         }
     elif schema_type == "HowTo" and article.get("howto_steps"):
         data = {
-            "@context": "[https://schema.org](https://schema.org)",
+            "@context": "https://schema.org",
             "@type": "HowTo",
             "name": title,
             "description": meta_description,
@@ -431,7 +507,7 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
     else:
         schema_type = article_type
         data = {
-            "@context": "[https://schema.org](https://schema.org)",
+            "@context": "https://schema.org",
             "@type": article_type,
             "headline": title,
             "description": meta_description,
@@ -467,14 +543,16 @@ def build_json_ld(article: dict, canonical_url: str, thumb_url: str, date: str, 
         })
         print(f"  → [스키마 마크업] ItemList 추가 (상품 {len(products[:6])}개)")
 
-    graph_data = {"@context": "[https://schema.org](https://schema.org)", "@graph": graph_nodes}
+    graph_data = {"@context": "https://schema.org", "@graph": graph_nodes}
+
     print(f"  → [스키마 마크업] AI가 선택한 타입: {schema_type} (+ BreadcrumbList)")
     return json.dumps(graph_data, ensure_ascii=False, indent=2)
 
 
 def build_blog_index_json_ld(posts: list) -> str:
+    """홈 화면용 Blog 스키마 마크업 - 최근 글 목록을 구조화 데이터로 노출합니다."""
     data = {
-        "@context": "[https://schema.org](https://schema.org)",
+        "@context": "https://schema.org",
         "@type": "Blog",
         "name": SITE_TITLE,
         "url": (SITE_URL + "/") if SITE_URL else ".",
@@ -510,8 +588,8 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{meta_description}">
 <meta name="twitter:image" content="{thumb_url}">
-<link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
-<link href="[https://fonts.googleapis.com/css2?family=](https://fonts.googleapis.com/css2?family=){font}&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family={font}&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">
 {json_ld}
 </script>{ga_snippet}{adsense_snippet}
@@ -562,6 +640,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
   body {{ top: 0 !important; }}
   .goog-te-banner-frame {{ display: none !important; }}
 </style>
+</style>
 </head>
 <body>
 {translate_widget}
@@ -587,7 +666,7 @@ ALL_THEME_FONTS = sorted({t["font"] for t in CATEGORY_THEMES.values()})
 
 def _google_fonts_url() -> str:
     families = "&family=".join(ALL_THEME_FONTS)
-    return f"[https://fonts.googleapis.com/css2?family=](https://fonts.googleapis.com/css2?family=){families}&family=Noto+Sans+KR:wght@400;700;900&display=swap"
+    return f"https://fonts.googleapis.com/css2?family={families}&family=Noto+Sans+KR:wght@400;700;900&display=swap"
 
 
 INDEX_TEMPLATE = """<!DOCTYPE html>
@@ -599,7 +678,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta name="description" content="{site_title} - 자동으로 업데이트되는 블로그">
 <link rel="canonical" href="{site_url}/">
 <link rel="icon" type="image/png" href="favicon.png">{search_console_meta}
-<link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="{fonts_url}" rel="stylesheet">
 <script type="application/ld+json">
 {blog_json_ld}
@@ -623,12 +702,14 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   .tier-label {{ font-size: 0.85em; font-weight:900; color:#aaa; letter-spacing:2px; margin: 34px 0 12px; text-transform:uppercase; }}
   .tier-label:first-of-type {{ margin-top: 10px; }}
 
+  /* 상단(TOP) - 히어로 1건, 가장 큰 임팩트 */
   .hero {{ display:block; text-decoration:none; color:#1a1a1a; background:#fff; border-radius:20px; overflow:hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.10); }}
   .hero img {{ width:100%; aspect-ratio: 21/9; object-fit:cover; display:block; }}
   .hero-body {{ padding: clamp(16px, 4vw, 22px) clamp(18px, 5vw, 26px) 28px; }}
   .hero-badge {{ display:inline-block; font-size:0.8em; font-weight:700; color:#fff; padding:5px 14px; border-radius:999px; margin-bottom:12px; }}
   .hero-title {{ font-size: clamp(1.25em, 4.5vw, 1.7em); font-weight:800; line-height:1.35; word-break: keep-all; }}
 
+  /* 중단(MID) - 2단 그리드, 중간 크기 */
   .mid-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:18px; }}
   .mid-card {{ text-decoration:none; color:#1a1a1a; background:#fff; border-radius:16px; overflow:hidden; box-shadow: 0 3px 14px rgba(0,0,0,0.08); transition: transform .15s ease; }}
   .mid-card:hover {{ transform: translateY(-3px); }}
@@ -636,6 +717,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   .mid-body {{ padding: 14px 16px 18px; }}
   .mid-title {{ font-weight:700; font-size:clamp(0.92em, 3vw, 1.08em); line-height:1.4; word-break: keep-all; }}
 
+  /* 하단(BOTTOM) - 촘촘한 아카이브 그리드, 작은 크기 */
   .bottom-grid {{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:14px; }}
   .bottom-card {{ text-decoration:none; color:#1a1a1a; background:#fff; border-radius:10px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
   .bottom-card img {{ width:100%; aspect-ratio:16/10; object-fit:cover; display:block; }}
@@ -711,25 +793,25 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 <div class="card">
   <b>실시간 트래픽 확인 (GA4)</b><br>
   플레이스토어 "Google Analytics" 앱 설치 후 이 사이트의 방문자/인기글을 확인하세요.<br>
-  <a href="[https://analytics.google.com](https://analytics.google.com)" target="_blank">analytics.google.com 바로가기</a>
+  <a href="https://analytics.google.com" target="_blank">analytics.google.com 바로가기</a>
 </div>
 
 <div class="card">
   <b>수익(쿠팡 마크업 수수료) 확인</b><br>
   쿠팡파트너스 앱 또는 사이트에서 클릭수/수익을 확인하세요.<br>
-  <a href="[https://partners.coupang.com](https://partners.coupang.com)" target="_blank">partners.coupang.com 바로가기</a>
+  <a href="https://partners.coupang.com" target="_blank">partners.coupang.com 바로가기</a>
 </div>
 
 <div class="card">
   <b>광고 수익(애드센스) 확인</b><br>
   플레이스토어 "Google AdSense" 앱 설치 후 페이지뷰/광고 수익(전면광고 포함)을 확인하세요.<br>
-  <a href="[https://www.google.com/adsense](https://www.google.com/adsense)" target="_blank">adsense.google.com 바로가기</a>
+  <a href="https://www.google.com/adsense" target="_blank">adsense.google.com 바로가기</a>
 </div>
 
 <div class="card">
   <b>검색 노출 확인 (Google Search Console)</b><br>
   사이트가 구글 검색에 얼마나 노출/클릭되는지 확인하세요. 최초 1회 소유권 인증이 필요합니다.<br>
-  <a href="[https://search.google.com/search-console](https://search.google.com/search-console)" target="_blank">[search.google.com/search-console](https://search.google.com/search-console) 바로가기</a>
+  <a href="https://search.google.com/search-console" target="_blank">search.google.com/search-console 바로가기</a>
 </div>
 
 <h2>발행된 글 목록 ({post_count}개)</h2>
@@ -742,7 +824,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 """
 
 SITEMAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="[http://www.sitemaps.org/schemas/sitemap/0.9](http://www.sitemaps.org/schemas/sitemap/0.9)">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>{site_url}/</loc></url>
 {url_entries}
 </urlset>
@@ -811,10 +893,13 @@ def generate_article(title: str) -> dict:
             data = resp.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"]
             cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            # Gemini가 JSON 뒤에 불필요한 텍스트를 덧붙이는 경우(Extra data 오류) 대비:
+            # 첫 번째로 완결되는 JSON 객체만 읽고 나머지는 무시한다.
             decoder = json.JSONDecoder()
             article, _ = decoder.raw_decode(cleaned)
             article["keyword"] = title
 
+            # meta_description 길이 안전장치 (검색결과 스니펫 잘림/과다 방지)
             desc = article.get("meta_description", "").strip()
             if len(desc) > 160:
                 desc = desc[:157].rstrip() + "..."
@@ -860,31 +945,29 @@ def _hex_to_rgb(hex_color: str):
 
 
 def _fetch_illustration(category: str, size: tuple, seed: int):
+    """Pollinations.ai(무료, 키 불필요)에서 카테고리에 맞는 일러스트를 받아옵니다.
+    네트워크 실패/타임아웃 등 어떤 이유로든 실패하면 None을 반환하고,
+    호출부에서는 그냥 일러스트 없이(그라데이션만으로) 계속 진행합니다."""
     prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"]) + ILLUSTRATION_SUFFIX
     url = (
         f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
         f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
     )
-    
-    # [보완] 네트워크 타임아웃 오류 방지를 위해 타임아웃을 40초로 늘리고 3회 재시도 구현
-    for attempt in range(1, 4):
-        try:
-            resp = requests.get(url, timeout=40)
-            resp.raise_for_status()
-            img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
-            if img.size != size:
-                img = img.resize(size)
-            return img
-        except Exception as e:
-            print(f"  → [일러스트] 생성 시도 {attempt}/3 실패: {e}")
-            if attempt < 3:
-                time.sleep(3)
-    
-    print("  → [일러스트] 최종 실패, 그라데이션만 사용합니다.")
-    return None
+    try:
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+        if img.size != size:
+            img = img.resize(size)
+        return img
+    except Exception as e:
+        print(f"  → [일러스트] 생성 실패, 그라데이션만 사용: {e}")
+        return None
 
 
 def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
+    """폰트 종류/글자 수 추정에 의존하지 않고, 실제 렌더링 픽셀 너비를 하나씩 측정하며
+    줄바꿈합니다. 공백 단위로 먼저 시도하고, 한 단어 자체가 너무 길면 글자 단위로 쪼갭니다."""
     words = text.split(" ")
     lines = []
     current = ""
@@ -899,6 +982,7 @@ def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
             if width_of(candidate) <= max_width:
                 current = candidate
                 continue
+            # 단어 하나만으로도 이미 너무 긴 경우 -> 글자 단위로 강제 분할
             chunk = ""
             for ch in word:
                 if width_of(chunk + ch) <= max_width:
@@ -919,6 +1003,7 @@ def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
 def generate_thumbnail(title: str, output_path: str, theme: dict, category: str = "라이프스타일") -> None:
     img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
 
+    # --- 주제 관련 무료 일러스트를 반투명 배경으로 합성 ---
     seed = int(hashlib.md5(title.encode("utf-8")).hexdigest(), 16) % 100000
     illustration = _fetch_illustration(category, THUMB_SIZE, seed)
     if illustration is not None:
@@ -927,6 +1012,7 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     draw = ImageDraw.Draw(img)
     accent_rgb = _hex_to_rgb(theme["accent"])
 
+    # --- 주제 명시 라벨 뱃지 (1:1 정사각형 크롭 시에도 살아남도록 중앙 정렬) ---
     label_font = _load_font(32)
     label_text = theme["label"]
     lb = draw.textbbox((0, 0), label_text, font=label_font)
@@ -941,9 +1027,14 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     )
     draw.text((badge_x + pad_x, badge_y + pad_y - lb[1]), label_text, font=label_font, fill=(255, 255, 255, 255))
 
+    # --- 하단 포인트 바 (카테고리 색상으로 프레임을 잡아줘 시리즈 일관성 + 임팩트) ---
     bar_h = 18
     draw.rectangle([(0, THUMB_SIZE[1] - bar_h), (THUMB_SIZE[0], THUMB_SIZE[1])], fill=accent_rgb + (255,))
 
+    # --- 제목 텍스트 (실제 픽셀 너비를 측정해서 절대 넘치지 않게 함) ---
+    # 블로거 "추천 가젯", 네이버 인앱브라우저 등 외부 위젯은 16:9 원본 이미지를
+    # 정사각형(가로=세로)에 가깝게 잘라서 보여주는 경우가 많습니다. 그 최악의 경우(정사각형
+    # 크롭 = 가로 720px)에도 텍스트가 안 잘리도록, 폭을 620px로 더 넉넉히 여유를 둡니다.
     max_text_width = 620
     max_text_height = int(THUMB_SIZE[1] * 0.65)
 
@@ -961,6 +1052,7 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
             break
         font_size -= 4
 
+    # 4줄 안에 다 못 담으면 마지막 줄에 말줄임표 처리 (이 시점엔 각 줄 너비는 이미 폭 안에 보장됨)
     if len(_wrap_by_pixel_width(draw, title, font, max_text_width)) > 4:
         last = lines[-1]
         while draw.textbbox((0, 0), last + "...", font=font)[2] > max_text_width and len(last) > 1:
@@ -979,18 +1071,24 @@ def generate_thumbnail(title: str, output_path: str, theme: dict, category: str 
     img.convert("RGB").save(output_path, format="WEBP", quality=82, method=6)
 
 
+# ---------------------------------------------------------------------
+# 브랜드 로고 / 메인 배너 - 사이트 전체에서 재사용되는 고정 아이덴티티
+# (카테고리별로 바뀌는 포스트 테마와 달리, 이건 "내 블로그"를 상징하는 고정 이미지)
+# ---------------------------------------------------------------------
 BRAND_GRADIENT = [(15, 23, 42), (30, 41, 59), (51, 65, 85)]
-BRAND_ACCENT = (250, 204, 21)
+BRAND_ACCENT = (250, 204, 21)  # 골드 포인트 (랜드마크처럼 눈에 띄는 시그니처 컬러)
 
 LOGO_SIZE = (512, 512)
 BANNER_SIZE = (1600, 420)
 
 
 def generate_site_logo(output_path: str) -> None:
+    """사이트 로고(정사각형) - 사이트 제목 첫 글자를 활용한 심볼 마크. 파비콘으로도 재사용됩니다."""
     img = _make_gradient_background(LOGO_SIZE, BRAND_GRADIENT).convert("RGBA")
     draw = ImageDraw.Draw(img)
     w, h = LOGO_SIZE
 
+    # 골드 링(랜드마크 느낌의 원형 프레임)
     margin = 36
     draw.ellipse([margin, margin, w - margin, h - margin], outline=BRAND_ACCENT + (255,), width=10)
 
@@ -1004,10 +1102,12 @@ def generate_site_logo(output_path: str) -> None:
 
 
 def generate_site_banner(output_path: str) -> None:
+    """블로그 최상단 메인 배너(마스트헤드) - 브랜드 랜드마크 역할을 하는 시그니처 이미지."""
     img = _make_gradient_background(BANNER_SIZE, BRAND_GRADIENT).convert("RGBA")
     draw = ImageDraw.Draw(img)
     w, h = BANNER_SIZE
 
+    # 골드 포인트 라인 (상단 랜드마크 느낌의 장식 바)
     draw.rectangle([(0, 0), (w, 8)], fill=BRAND_ACCENT + (255,))
 
     title_font = _load_font(88)
@@ -1026,17 +1126,20 @@ def generate_site_banner(output_path: str) -> None:
 
 
 def ensure_brand_assets() -> None:
+    """로고/배너를 docs 루트에 항상 최신 상태로 준비해둡니다 (SITE_TITLE 변경 시 자동 반영)."""
     os.makedirs(DOCS_DIR, exist_ok=True)
     logo_path = os.path.join(DOCS_DIR, "logo.webp")
     generate_site_logo(logo_path)
     generate_site_banner(os.path.join(DOCS_DIR, "banner.webp"))
 
+    # 파비콘은 webp 지원이 브라우저마다 달라 PNG로 별도 저장 (호환성)
     favicon_path = os.path.join(DOCS_DIR, "favicon.png")
     with Image.open(logo_path) as im:
         im.convert("RGB").resize((64, 64)).save(favicon_path, format="PNG")
 
 
 def _coupang_deeplink(search_url: str):
+    """쿠팡파트너스 Open API로 실제 수수료가 붙는 딥링크를 발급받습니다. 실패 시 None."""
     if not (COUPANG_ACCESS_KEY and COUPANG_SECRET_KEY):
         return None
 
@@ -1065,6 +1168,8 @@ def _coupang_deeplink(search_url: str):
 
 
 def add_ymyl_disclaimer(article: dict) -> dict:
+    """대출/보험/정부지원금처럼 잘못된 정보가 실제 금전적 피해로 이어질 수 있는 주제는
+    AI 프롬프트 준수 여부와 무관하게 코드 레벨에서 항상 안내문구를 강제로 붙입니다."""
     theme = get_theme(article.get("category", "라이프스타일"))
     if not theme.get("ymyl"):
         return article
@@ -1082,6 +1187,9 @@ def add_ymyl_disclaimer(article: dict) -> dict:
 
 
 def _relevance_score(article: dict, candidate: dict) -> float:
+    """현재 글과 후보 글의 주제 관련도를 점수화합니다.
+    - 같은 카테고리면 기본 점수 +3
+    - 제목/키워드에 겹치는 단어가 많을수록 가산점"""
     score = 0.0
     if candidate.get("category") == article.get("category", "라이프스타일"):
         score += 3.0
@@ -1095,6 +1203,9 @@ def _relevance_score(article: dict, candidate: dict) -> float:
 
 
 def add_internal_link(article: dict) -> dict:
+    """본문 끝에 내부링크를 1곳 삽입합니다 (도입부 삽입은 제거).
+    단순 '최신글'이 아니라 카테고리 일치 + 제목 단어 겹침으로 관련도를 점수화하고,
+    상위 관련 후보 중에서 가중 랜덤으로 골라 매번 다른 글이 걸리도록(유니크하게) 합니다."""
     if not os.path.exists(POSTS_JSON):
         return article
     with open(POSTS_JSON, "r", encoding="utf-8") as f:
@@ -1133,6 +1244,9 @@ def _manual_ad_unit() -> str:
 
 
 def insert_manual_ads(article: dict) -> dict:
+    """시선이 가장 많이 머무는 '본문 상단 소제목 위'에 광고를 1개 수동 배치합니다.
+    글 하단 광고는 POST_TEMPLATE에서 related 섹션 뒤에 별도로 추가됩니다.
+    ADSENSE_SLOT_ID 미설정 시 아무 것도 삽입되지 않습니다 (자동광고만 동작)."""
     ad_html = _manual_ad_unit()
     if not ad_html:
         return article
@@ -1146,32 +1260,34 @@ def insert_manual_ads(article: dict) -> dict:
 
 
 def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
+    """본문 중간에 들어갈 주제 관련 이미지를 무료로 가져옵니다 (Pollinations.ai, 키 불필요).
+    썸네일의 아이콘풍 일러스트와 다르게, 좀 더 사진/장면에 가까운 분위기로 요청합니다."""
     base_prompt = ILLUSTRATION_PROMPTS.get(category, ILLUSTRATION_PROMPTS["라이프스타일"])
     prompt = base_prompt.replace("flat vector illustration of", "photo illustration of") + ", high quality, natural lighting"
     url = (
         f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
         f"?width={size[0]}&height={size[1]}&seed={seed}&nologo=true"
     )
-    
-    # [보완] 네트워크 지연 극복을 위한 재시도 및 대기 추가
-    for attempt in range(1, 4):
-        try:
-            resp = requests.get(url, timeout=30)
-            resp.raise_for_status()
-            img = Image.open(io.BytesIO(resp.content)).convert("RGB")
-            if img.size != size:
-                img = img.resize(size)
-            return img
-        except Exception as e:
-            print(f"  → [본문 이미지] 시도 {attempt}/3 실패: {e}")
-            if attempt < 3:
-                time.sleep(3)
-                
-    print("  → [본문 이미지] 생성 실패로 본문 삽입을 생략합니다.")
-    return None
+    try:
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+        if img.size != size:
+            img = img.resize(size)
+        return img
+    except Exception as e:
+        print(f"  → [본문 이미지] 생성 실패, 삽입 건너뜀: {e}")
+        return None
 
 
 def enhance_tables(html_body: str, accent: str) -> str:
+    """본문 안의 모든 <table>을 (1) 가로 스크롤 가능한 컨테이너 + (2) '표 크게 보기' 버튼으로
+    감쌉니다. 버튼을 누르면 같은 표를 화면 중앙에 큼직하게 띄워주는 모달이 열립니다.
+    전부 인라인 스타일(style="...")과 <button onclick="...">만 사용합니다.
+    → CSS 클래스(<style> 태그 규칙)에 의존하면 블로거처럼 본문 내용만 전달되고
+    <head>의 <style>은 전달되지 않는 환경에서 스타일이 통째로 사라지는 문제가 있었습니다
+    (표가 안 잘리고 그냥 스크롤 없이 좁게 눌린 채로 나오거나, 모달이 숨겨지지 않고
+    본문 중간에 표가 그대로 중복 출력되는 형태로 나타남). 인라인 스타일은 이 문제가 없습니다."""
     counter = {"n": 0}
 
     def _style_cells(raw_table: str, min_width: int) -> str:
@@ -1180,12 +1296,14 @@ def enhance_tables(html_body: str, accent: str) -> str:
             f'<table style="width:100%;min-width:{min_width}px;border-collapse:collapse;"',
             raw_table, count=1,
         )
+        # 헤더 셀: 포인트컬러 배경 + 두꺼운 밑줄로 본문과 확실히 구분
         styled = re.sub(
             r"<th(?![^>]*style=)",
             f'<th style="padding:12px 14px;text-align:left;background:{accent}1f;font-weight:800;'
             f'color:#111;border-bottom:2px solid {accent}80;white-space:nowrap;"',
             styled,
         )
+        # 일반 셀: 옅은 구분선 + 여백을 넉넉히 줘서 줄마다 시각적으로 분리
         styled = re.sub(
             r"<td(?![^>]*style=)",
             '<td style="padding:12px 14px;text-align:left;border-bottom:1px solid #ececec;line-height:1.65;vertical-align:top;"',
@@ -1221,7 +1339,10 @@ def enhance_tables(html_body: str, accent: str) -> str:
     return re.sub(r"<table.*?</table>", wrap_table, html_body, flags=re.DOTALL)
 
 
+
+
 def insert_content_image(article: dict, slug: str) -> dict:
+    """본문 첫 소제목(H2) 바로 뒤에 주제와 관련된 실제 무료 이미지를 1장 삽입합니다."""
     category = article.get("category", "라이프스타일")
     seed = int(hashlib.md5((article["title"] + "-inline").encode("utf-8")).hexdigest(), 16) % 100000
     photo = _fetch_content_photo(category, seed)
@@ -1247,6 +1368,7 @@ def insert_content_image(article: dict, slug: str) -> dict:
 
 
 def _fetch_product_icon(product_name: str, seed: int, size=(160, 160)):
+    """상품/브랜드명 기반 작은 연필 스케치 아이콘을 무료로 생성합니다 (Pollinations.ai)."""
     prompt = (
         f"minimalist pencil sketch icon of {product_name}, single centered object, "
         "clean line art, simple outline, white background, no text, no watermark"
@@ -1268,6 +1390,7 @@ def _fetch_product_icon(product_name: str, seed: int, size=(160, 160)):
 
 
 def build_product_list_html(article: dict, slug: str, accent: str) -> str:
+    """product_list에 담긴 상품들을 아이콘과 함께 카드 목록으로 렌더링합니다."""
     products = article.get("product_list") or []
     if not products:
         return ""
@@ -1326,12 +1449,13 @@ def _font_family_name(font_param: str) -> str:
 
 
 def _build_post_nav_html() -> str:
+    """이전 게시물(작은 썸네일 아이콘) + 최신 게시물(홈 아이콘)로 가는 작은 네비게이션 바를 만듭니다."""
     prev_post = None
     if os.path.exists(POSTS_JSON):
         with open(POSTS_JSON, "r", encoding="utf-8") as f:
             posts = json.load(f)
         if posts:
-            prev_post = posts[0]
+            prev_post = posts[0]  # 지금 막 만드는 글보다 이전(직전)에 발행된 글
 
     prev_html = (
         f'<a href="../{prev_post["file"]}"><img src="../{prev_post["thumb"]}" alt="이전 게시물">'
@@ -1345,6 +1469,7 @@ def _build_post_nav_html() -> str:
 
 
 def _build_related_html(exclude_slug: str) -> str:
+    """이전에 발행된 글 중 최신 3개를 관련글로 보여줍니다 (체류시간/페이지뷰 증가 → 광고수익에 도움)."""
     if not os.path.exists(POSTS_JSON):
         return ""
     with open(POSTS_JSON, "r", encoding="utf-8") as f:
@@ -1375,13 +1500,21 @@ def save_post(article: dict):
 
     generate_thumbnail(article["title"], os.path.join(DOCS_DIR, "thumbs", thumb_filename), theme, category)
 
+    # AI가 프롬프트 지시(Q&A를 본문에 넣지 말라)를 가끔 무시하고 자체적으로
+    # "자주 묻는 질문" 표/섹션을 만들어버리는 경우가 있어, 우리가 만드는 아코디언과
+    # 중복/충돌하지 않도록 방어적으로 미리 제거합니다 (있으면 지우고, 없으면 그대로 통과).
     cleaned_body = article["html_body"]
     cleaned_body = re.sub(r"<h[23]>자주\s*묻는\s*질문.*?</table>", "", cleaned_body, flags=re.DOTALL | re.IGNORECASE)
     article["html_body"] = cleaned_body
 
+    # 본문에 남아있는(비교표 등 정상적인) 모든 표에 가독성 개선 + 클릭시 확대 기능 적용
     article["html_body"] = enhance_tables(article["html_body"], theme["accent"])
+
+    # 본문 중간에 주제 관련 실제 이미지 삽입 (실패해도 조용히 건너뜀)
     article = insert_content_image(article, slug)
 
+    # FAQ 섹션을 구조화된 데이터로 직접 렌더링해서 html_body에 병합
+    # (article 딕셔너리를 직접 수정하므로, 이후 블로거 발행 시에도 동일하게 반영됨)
     article["html_body"] += build_faq_section_html(article, theme["accent"])
     article["html_body"] += build_product_list_html(article, slug, theme["accent"])
 
@@ -1539,6 +1672,8 @@ def build_footer_html() -> str:
 
 
 def generate_static_pages() -> None:
+    """About / Privacy Policy / Contact 페이지를 생성합니다 (SEO 신뢰도 + 애드센스 승인 필수요건).
+    이미 있으면 건드리지 않고, 없을 때만 새로 만듭니다 (직접 문구를 수정해도 덮어쓰지 않기 위함)."""
     os.makedirs(DOCS_DIR, exist_ok=True)
     common_kwargs = dict(
         site_title=SITE_TITLE,
@@ -1579,10 +1714,10 @@ def generate_static_pages() -> None:
     for filename, (page_title, page_body) in pages.items():
         path = os.path.join(DOCS_DIR, filename)
         if os.path.exists(path):
-            continue
+            continue  # 이미 있으면 (직접 수정했을 수 있으니) 덮어쓰지 않음
         with open(path, "w", encoding="utf-8") as f:
             f.write(STATIC_PAGE_TEMPLATE.format(page_title=page_title, page_body=page_body, **common_kwargs))
-        print(f"  → [설정] {filename} 생성됨")
+        print(f"  → [설정] {filename} 생성됨 (내용은 실제 정보로 직접 수정 권장)")
 
 
 def update_dashboard(posts: list) -> None:
@@ -1595,6 +1730,7 @@ def update_dashboard(posts: list) -> None:
 
 
 def update_seo_files(posts: list) -> None:
+    """SEO용 sitemap.xml / robots.txt를 매번 최신 글 목록 기준으로 갱신합니다."""
     if not SITE_URL:
         print("  → [SEO] SITE_URL이 설정되지 않아 sitemap.xml/robots.txt 생성을 건너뜁니다.")
         return
@@ -1608,7 +1744,7 @@ def update_seo_files(posts: list) -> None:
 
 
 # ---------------------------------------------------------------------
-# 구글 블로거(Blogger) 동시 발행 - v4.2 (디버깅 강화 및 예외 처리 완벽판)
+# 구글 블로거(Blogger) 동시 발행 - v4
 # ---------------------------------------------------------------------
 
 def _blogger_configured() -> bool:
@@ -1616,39 +1752,39 @@ def _blogger_configured() -> bool:
 
 
 def _get_blogger_access_token() -> str:
-    # [수정] 400 Client Error 발생 시 구글 서버가 주는 원인 문자열(예: invalid_grant)을 로그에 정교하게 남김
-    try:
-        resp = requests.post(
-            "https://oauth2.googleapis.com/token",
-            data={
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "refresh_token": GOOGLE_REFRESH_TOKEN,
-                "grant_type": "refresh_token",
-            },
-            timeout=20,
-        )
-        if resp.status_code != 200:
-            print(f"  → [OAuth2 갱신 실패 상세]: {resp.text}")
-        resp.raise_for_status()
-        return resp.json()["access_token"]
-    except Exception as e:
-        print(f"  → [OAuth2] 구글 인증서버에서 Access Token 갱신 요청을 거절함: {e}")
-        raise e
+    """리프레시 토큰으로 새 access token을 발급받습니다 (매 실행마다 자동, 사람 개입 불필요)."""
+    resp = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "refresh_token": GOOGLE_REFRESH_TOKEN,
+            "grant_type": "refresh_token",
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
 
 
 def _make_blogger_safe_html(html_body: str) -> str:
+    """html_body 안에는 GitHub Pages 폴더 구조 기준 상대경로 링크(../posts/, ../thumbs/)가
+    섞여 있을 수 있습니다 (같은 카테고리 이전 글로의 내부링크 등). 이 상대경로는 블로거에는
+    존재하지 않는 주소라 그대로 두면 '페이지를 찾을 수 없습니다' 오류가 납니다.
+    SITE_URL이 설정되어 있으면 절대경로로 바꾸고, 없으면 깨진 링크를 만들지 않도록 태그만 제거합니다."""
     if SITE_URL:
         html_body = html_body.replace('href="../posts/', f'href="{SITE_URL}/posts/')
         html_body = html_body.replace('href="../thumbs/', f'href="{SITE_URL}/thumbs/')
         html_body = html_body.replace('src="../thumbs/', f'src="{SITE_URL}/thumbs/')
     else:
+        # SITE_URL이 없으면 절대경로를 만들 수 없으니, 깨진 링크/이미지를 만들지 않도록 제거합니다.
         html_body = re.sub(r'<a href="\.\./(posts|thumbs)/[^"]*"[^>]*>(.*?)</a>', r"\2", html_body)
         html_body = re.sub(r'<img src="\.\./thumbs/[^"]*"[^>]*>', "", html_body)
     return html_body
 
 
 def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_thumb_path: str) -> None:
+    """같은 글을 구글 블로거에도 발행합니다. 미설정/실패해도 전체 파이프라인은 계속 진행됩니다."""
     if not _blogger_configured():
         print("  → [블로거] 관련 Secrets가 없어 건너뜁니다 (GitHub Pages만 발행).")
         return
@@ -1657,23 +1793,24 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
         access_token = _get_blogger_access_token()
         theme = get_theme(article.get("category", "라이프스타일"))
         today = datetime.now().strftime("%Y-%m-%d")
+        # 블로거 채널에는 Article 대신 BlogPosting 스키마 사용 (블로그 플랫폼 권장 타입)
         blogger_json_ld = build_json_ld(article, canonical_url, thumb_url, today, platform="blogger")
 
+        # 썸네일을 외부 URL 링크가 아니라 base64로 직접 본문에 박아 넣습니다.
+        # → SITE_URL 설정 여부나 GitHub Pages 배포 상태와 무관하게 이미지가 항상 정상 표시됩니다
+        #   (이전에 "이미지 손상"이 발생했던 원인이 바로 외부 링크 의존성이었습니다).
         try:
-            with Image.open(local_thumb_path) as origin_img:
-                origin_img.thumbnail((800, 450))
-                buffered = io.BytesIO()
-                origin_img.save(buffered, format="WEBP", quality=75)
-                img_b64 = base64.b64encode(buffered.getvalue()).decode("ascii")
+            with open(local_thumb_path, "rb") as f:
+                img_b64 = base64.b64encode(f.read()).decode("ascii")
             img_src = f"data:image/webp;base64,{img_b64}"
         except Exception as e:
-            print(f"  → [블로거] 썸네일 인클루드 압축 변환 중 에러, 외부 링크 대체: {e}")
+            print(f"  → [블로거] 썸네일 base64 인코딩 실패, 외부 링크로 대체: {e}")
             img_src = thumb_url
 
         content_html = (
             f'{_translate_widget()}'
             f'<div id="blogger-tts-content">'
-            f'<img src="{img_src}" style="max-width:100%;border-radius:8px;display:block;margin:0 auto 15px;" alt="{article["title"]}">'
+            f'<img src="{img_src}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
             f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
             f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
             f'{_make_blogger_safe_html(article["html_body"])}'
@@ -1687,17 +1824,17 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
         headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
 
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        if resp.status_code != 200:
-            print(f"  → [블로거 API 오류 응답]: {resp.text}")
         resp.raise_for_status()
-        
         result = resp.json()
         print(f"  → [블로거] 발행 완료: {result.get('url', '(URL 확인 불가)')}")
     except Exception as e:
-        print(f"  → [블로거] 최종 발행 실패 (GitHub Pages 발행은 정상 완료): {e}")
+        print(f"  → [블로거] 발행 실패 (GitHub Pages 발행은 정상 진행됨): {e}")
 
 
 def ensure_nojekyll() -> None:
+    """GitHub Pages가 Jekyll로 문서를 가공하지 않고 있는 그대로 서빙하게 합니다.
+    이 파일이 없으면 Jekyll이 파일명/구조를 자기 방식대로 해석하면서
+    링크가 깨지거나 일부 파일이 누락되는 문제가 생길 수 있습니다."""
     os.makedirs(DOCS_DIR, exist_ok=True)
     nojekyll_path = os.path.join(DOCS_DIR, ".nojekyll")
     if not os.path.exists(nojekyll_path):
