@@ -132,101 +132,6 @@ function googleTranslateElementInit() {
 }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-<div style="position:fixed;bottom:20px;right:20px;z-index:998;">
-  <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
-    style="border:none;border-radius:999px;background:#11694f;color:#fff;font-weight:700;
-    font-size:13px;padding:10px 16px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">듣기</button>
-</div>
-<script>
-(function() {
-  var speaking = false;
-  var currentAudio = null;
-  var chunkQueue = [];
-  var chunkIndex = 0;
-  var TTS_ENDPOINT = 'https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=';
-
-  function updateBtn() {
-    var btn = document.getElementById('tts-btn');
-    if (btn) btn.textContent = speaking ? '정지' : '듣기';
-  }
-
-  function extractReadableText() {
-    var content = document.querySelector('.content');
-    if (!content) return '';
-    var clone = content.cloneNode(true);
-    // 표는 항목이 뒤섞여 어색하게 들리므로 읽기 대상에서 제외
-    var strip = clone.querySelectorAll('table, button, script, style, .related, [id^="tblzoom"]');
-    strip.forEach(function(el) { el.remove(); });
-    return (clone.innerText || clone.textContent || '').trim();
-  }
-
-  function splitIntoChunks(text, maxLen) {
-    var chunks = [];
-    while (text.length > 0) {
-      var piece = text.slice(0, maxLen);
-      if (text.length > maxLen) {
-        var cut = Math.max(piece.lastIndexOf('.'), piece.lastIndexOf('\n'), piece.lastIndexOf('!'), piece.lastIndexOf('?'));
-        if (cut > 40) piece = text.slice(0, cut + 1);
-      }
-      chunks.push(piece);
-      text = text.slice(piece.length);
-    }
-    return chunks.slice(0, 20); // 너무 긴 글은 앞부분 위주로 (최대 약 8000자)
-  }
-
-  function stop() {
-    speaking = false;
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    updateBtn();
-  }
-
-  function playChunkWithAI(i) {
-    if (!speaking || i >= chunkQueue.length) { speaking = false; updateBtn(); return; }
-    var audio = new Audio(TTS_ENDPOINT + encodeURIComponent(chunkQueue[i]));
-    currentAudio = audio;
-    audio.onended = function() { playChunkWithAI(i + 1); };
-    audio.onerror = function() { speakWithBrowserVoice(chunkQueue.join(' ')); };
-    audio.play().catch(function() { speakWithBrowserVoice(chunkQueue.join(' ')); });
-  }
-
-  function speakWithBrowserVoice(text) {
-    var synth = window.speechSynthesis;
-    if (!synth) { speaking = false; updateBtn(); return; }
-    var voices = synth.getVoices() || [];
-    var ko = voices.filter(function(v) { return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; });
-    var female = ko.filter(function(v) { return /female|여성|유나|보라|서연|지민/i.test(v.name); });
-    var utter = new SpeechSynthesisUtterance(text.slice(0, 3000));
-    var voice = female[0] || ko[0];
-    if (voice) utter.voice = voice;
-    utter.lang = 'ko-KR';
-    utter.rate = 0.92;
-    utter.onend = function() { speaking = false; updateBtn(); };
-    utter.onerror = function() { speaking = false; updateBtn(); };
-    synth.cancel();
-    synth.speak(utter);
-  }
-
-  function speak() {
-    var text = extractReadableText();
-    if (!text) return;
-    speaking = true;
-    updateBtn();
-    chunkQueue = splitIntoChunks(text, 350);
-    playChunkWithAI(0);
-  }
-
-  window.__ttsToggle = function() {
-    if (speaking) { stop(); } else { speak(); }
-  };
-
-  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 "듣기" 버튼으로 수동 시작)
-  setTimeout(function() {
-    try { speak(); } catch (e) {}
-  }, 1000);
-})();
-</script>
 <div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:92%;left:62%;font-size:38px;opacity:0.1;transform:rotate(20deg);">📊</span><span class="decor-item" style="top:36%;left:13%;font-size:31px;opacity:0.15;transform:rotate(26deg);">📊</span><span class="decor-item" style="top:93%;left:8%;font-size:37px;opacity:0.15;transform:rotate(5deg);">💳</span><span class="decor-item" style="top:25%;left:77%;font-size:26px;opacity:0.14;transform:rotate(-4deg);">💳</span><span class="decor-item" style="top:53%;left:72%;font-size:42px;opacity:0.09;transform:rotate(27deg);">📈</span><span class="decor-item" style="top:34%;left:70%;font-size:34px;opacity:0.14;transform:rotate(-29deg);">📊</span><span class="decor-item" style="top:16%;left:69%;font-size:30px;opacity:0.08;transform:rotate(-21deg);">💳</span><span class="decor-item" style="top:33%;left:42%;font-size:41px;opacity:0.07;transform:rotate(1deg);">💰</span><span class="decor-item" style="top:23%;left:35%;font-size:37px;opacity:0.12;transform:rotate(-19deg);">🏦</span><span class="decor-item" style="top:14%;left:44%;font-size:30px;opacity:0.15;transform:rotate(-16deg);">🪙</span><span class="decor-item" style="top:17%;left:44%;font-size:37px;opacity:0.15;transform:rotate(-3deg);">🏦</span></div>
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
@@ -311,10 +216,10 @@ function googleTranslateElementInit() {
 <p>둘째, <strong>자신의 투자 성향과 목표</strong>에 맞는 투자 방법을 선택해야 합니다. 직접 실물 금을 보유하며 안정감을 느끼고 싶다면 골드바를, 소액으로 꾸준히 투자하고 싶다면 금 통장이나 금 ETF를 고려해볼 수 있습니다. 각 투자 방법의 장단점과 수수료 구조를 충분히 이해하는 것이 필수적입니다.</p>
 <p>셋째, <strong>장기적인 관점</strong>에서 접근하세요. 금은 단기적인 시세 차익보다는 장기적인 가치 보존 및 인플레이션 헤지 목적으로 더욱 적합합니다. 시장의 일시적인 변동에 일희일비하기보다는 긴 호흡으로 시장을 바라보는 인내가 필요합니다.</p>
 <p>넷째, <strong>최신 정보를 꾸준히 확인</strong>하고 학습하는 자세가 중요합니다. 금 시장은 국제 정세, 경제 지표, 각국 중앙은행의 정책 등 다양한 요인에 의해 끊임없이 변동합니다. 관련 뉴스, 경제 보고서 등을 통해 시장의 흐름을 이해하려는 노력이 필요합니다. 어떤 투자든 마찬가지지만, 금 투자 역시 충분한 학습과 분석이 뒷받침될 때 비로소 성공적인 결과를 기대할 수 있을 것입니다.</p><p style="margin-top:2em;padding-top:1em;border-top:1px dashed #ddd;">🔗 이 글도 함께 보면 좋아요: <a href="../posts/통화-스와프-2026-07-13.html">통화 스와프 뜻 필요성 금융시장 영향 자세히 알아보기</a></p>
-<div class="post-nav"><a href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="이전 게시물"><span>← 이전 게시물: 야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
-<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a>
-<a class="related-card" href="../posts/백령도-2026-07-18.html"><img src="../thumbs/백령도-2026-07-18.webp" alt="서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬" loading="lazy"><span>서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬</span></a>
-<a class="related-card" href="../posts/김송-2026-07-18.html"><img src="../thumbs/김송-2026-07-18.webp" alt="김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황" loading="lazy"><span>김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황</span></a></div></div>
+<div class="post-nav"><a href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="이전 게시물"><span>← 이전 게시물: 카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
+<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징" loading="lazy"><span>카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a>
+<a class="related-card" href="../posts/손호영-2026-07-18.html"><img src="../thumbs/손호영-2026-07-18.webp" alt="가수 손호영 프로필 활동 요약 및 최신 근황" loading="lazy"><span>가수 손호영 프로필 활동 요약 및 최신 근황</span></a>
+<a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a></div></div>
 
 </div>
 </body>

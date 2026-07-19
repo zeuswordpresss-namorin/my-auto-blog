@@ -132,101 +132,6 @@ function googleTranslateElementInit() {
 }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-<div style="position:fixed;bottom:20px;right:20px;z-index:998;">
-  <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
-    style="border:none;border-radius:999px;background:#4a90d9;color:#fff;font-weight:700;
-    font-size:13px;padding:10px 16px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">듣기</button>
-</div>
-<script>
-(function() {
-  var speaking = false;
-  var currentAudio = null;
-  var chunkQueue = [];
-  var chunkIndex = 0;
-  var TTS_ENDPOINT = 'https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=';
-
-  function updateBtn() {
-    var btn = document.getElementById('tts-btn');
-    if (btn) btn.textContent = speaking ? '정지' : '듣기';
-  }
-
-  function extractReadableText() {
-    var content = document.querySelector('.content');
-    if (!content) return '';
-    var clone = content.cloneNode(true);
-    // 표는 항목이 뒤섞여 어색하게 들리므로 읽기 대상에서 제외
-    var strip = clone.querySelectorAll('table, button, script, style, .related, [id^="tblzoom"]');
-    strip.forEach(function(el) { el.remove(); });
-    return (clone.innerText || clone.textContent || '').trim();
-  }
-
-  function splitIntoChunks(text, maxLen) {
-    var chunks = [];
-    while (text.length > 0) {
-      var piece = text.slice(0, maxLen);
-      if (text.length > maxLen) {
-        var cut = Math.max(piece.lastIndexOf('.'), piece.lastIndexOf('\n'), piece.lastIndexOf('!'), piece.lastIndexOf('?'));
-        if (cut > 40) piece = text.slice(0, cut + 1);
-      }
-      chunks.push(piece);
-      text = text.slice(piece.length);
-    }
-    return chunks.slice(0, 20); // 너무 긴 글은 앞부분 위주로 (최대 약 8000자)
-  }
-
-  function stop() {
-    speaking = false;
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    updateBtn();
-  }
-
-  function playChunkWithAI(i) {
-    if (!speaking || i >= chunkQueue.length) { speaking = false; updateBtn(); return; }
-    var audio = new Audio(TTS_ENDPOINT + encodeURIComponent(chunkQueue[i]));
-    currentAudio = audio;
-    audio.onended = function() { playChunkWithAI(i + 1); };
-    audio.onerror = function() { speakWithBrowserVoice(chunkQueue.join(' ')); };
-    audio.play().catch(function() { speakWithBrowserVoice(chunkQueue.join(' ')); });
-  }
-
-  function speakWithBrowserVoice(text) {
-    var synth = window.speechSynthesis;
-    if (!synth) { speaking = false; updateBtn(); return; }
-    var voices = synth.getVoices() || [];
-    var ko = voices.filter(function(v) { return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; });
-    var female = ko.filter(function(v) { return /female|여성|유나|보라|서연|지민/i.test(v.name); });
-    var utter = new SpeechSynthesisUtterance(text.slice(0, 3000));
-    var voice = female[0] || ko[0];
-    if (voice) utter.voice = voice;
-    utter.lang = 'ko-KR';
-    utter.rate = 0.92;
-    utter.onend = function() { speaking = false; updateBtn(); };
-    utter.onerror = function() { speaking = false; updateBtn(); };
-    synth.cancel();
-    synth.speak(utter);
-  }
-
-  function speak() {
-    var text = extractReadableText();
-    if (!text) return;
-    speaking = true;
-    updateBtn();
-    chunkQueue = splitIntoChunks(text, 350);
-    playChunkWithAI(0);
-  }
-
-  window.__ttsToggle = function() {
-    if (speaking) { stop(); } else { speak(); }
-  };
-
-  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 "듣기" 버튼으로 수동 시작)
-  setTimeout(function() {
-    try { speak(); } catch (e) {}
-  }, 1000);
-})();
-</script>
 <div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:30%;left:60%;font-size:28px;opacity:0.1;transform:rotate(-25deg);">🎧</span><span class="decor-item" style="top:61%;left:42%;font-size:56px;opacity:0.14;transform:rotate(-17deg);">🕊️</span><span class="decor-item" style="top:81%;left:13%;font-size:33px;opacity:0.15;transform:rotate(7deg);">📓</span><span class="decor-item" style="top:82%;left:36%;font-size:33px;opacity:0.15;transform:rotate(-1deg);">✨</span><span class="decor-item" style="top:5%;left:56%;font-size:55px;opacity:0.1;transform:rotate(-12deg);">🎧</span><span class="decor-item" style="top:76%;left:33%;font-size:49px;opacity:0.09;transform:rotate(4deg);">⭐</span><span class="decor-item" style="top:31%;left:90%;font-size:51px;opacity:0.11;transform:rotate(8deg);">⭐</span><span class="decor-item" style="top:42%;left:71%;font-size:45px;opacity:0.13;transform:rotate(-18deg);">⭐</span><span class="decor-item" style="top:94%;left:34%;font-size:52px;opacity:0.13;transform:rotate(-15deg);">🎧</span></div>
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
@@ -283,10 +188,10 @@ function googleTranslateElementInit() {
 <p>손흥민, 이강인 등 유럽파 선수들과 국내 K리그에서 활약하는 유망주들이 시너지를 발휘한다면, 2026 월드컵에서 좋은 성적을 기대해 볼 수 있습니다. 대표팀은 다가오는 예선전을 철저히 준비하여 국민들의 기대에 부응할 수 있도록 최선을 다할 것입니다.</p>
 
 <p>2026 FIFA 월드컵은 단순한 스포츠 이벤트를 넘어, 축구의 미래를 제시하는 중요한 대회가 될 것입니다. 새로운 변화들이 성공적으로 안착하여 전 세계 축구 팬들에게 잊지 못할 감동과 즐거움을 선사하기를 기대합니다.</p><p style="margin-top:2em;padding-top:1em;border-top:1px dashed #ddd;">🔗 이 글도 함께 보면 좋아요: <a href="../posts/손예진-아들-2026-07-11.html">손예진 현빈 부부 아들 탄생과 육아 이야기, 현재 근황</a></p>
-<div class="post-nav"><a href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="이전 게시물"><span>← 이전 게시물: 야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
-<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a>
-<a class="related-card" href="../posts/백령도-2026-07-18.html"><img src="../thumbs/백령도-2026-07-18.webp" alt="서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬" loading="lazy"><span>서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬</span></a>
-<a class="related-card" href="../posts/김송-2026-07-18.html"><img src="../thumbs/김송-2026-07-18.webp" alt="김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황" loading="lazy"><span>김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황</span></a></div></div>
+<div class="post-nav"><a href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="이전 게시물"><span>← 이전 게시물: 카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
+<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징" loading="lazy"><span>카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a>
+<a class="related-card" href="../posts/손호영-2026-07-18.html"><img src="../thumbs/손호영-2026-07-18.webp" alt="가수 손호영 프로필 활동 요약 및 최신 근황" loading="lazy"><span>가수 손호영 프로필 활동 요약 및 최신 근황</span></a>
+<a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a></div></div>
 
 </div>
 </body>

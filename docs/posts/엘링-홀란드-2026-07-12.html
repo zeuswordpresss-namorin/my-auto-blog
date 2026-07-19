@@ -132,101 +132,6 @@ function googleTranslateElementInit() {
 }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-<div style="position:fixed;bottom:20px;right:20px;z-index:998;">
-  <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
-    style="border:none;border-radius:999px;background:#134e5e;color:#fff;font-weight:700;
-    font-size:13px;padding:10px 16px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">듣기</button>
-</div>
-<script>
-(function() {
-  var speaking = false;
-  var currentAudio = null;
-  var chunkQueue = [];
-  var chunkIndex = 0;
-  var TTS_ENDPOINT = 'https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=';
-
-  function updateBtn() {
-    var btn = document.getElementById('tts-btn');
-    if (btn) btn.textContent = speaking ? '정지' : '듣기';
-  }
-
-  function extractReadableText() {
-    var content = document.querySelector('.content');
-    if (!content) return '';
-    var clone = content.cloneNode(true);
-    // 표는 항목이 뒤섞여 어색하게 들리므로 읽기 대상에서 제외
-    var strip = clone.querySelectorAll('table, button, script, style, .related, [id^="tblzoom"]');
-    strip.forEach(function(el) { el.remove(); });
-    return (clone.innerText || clone.textContent || '').trim();
-  }
-
-  function splitIntoChunks(text, maxLen) {
-    var chunks = [];
-    while (text.length > 0) {
-      var piece = text.slice(0, maxLen);
-      if (text.length > maxLen) {
-        var cut = Math.max(piece.lastIndexOf('.'), piece.lastIndexOf('\n'), piece.lastIndexOf('!'), piece.lastIndexOf('?'));
-        if (cut > 40) piece = text.slice(0, cut + 1);
-      }
-      chunks.push(piece);
-      text = text.slice(piece.length);
-    }
-    return chunks.slice(0, 20); // 너무 긴 글은 앞부분 위주로 (최대 약 8000자)
-  }
-
-  function stop() {
-    speaking = false;
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    updateBtn();
-  }
-
-  function playChunkWithAI(i) {
-    if (!speaking || i >= chunkQueue.length) { speaking = false; updateBtn(); return; }
-    var audio = new Audio(TTS_ENDPOINT + encodeURIComponent(chunkQueue[i]));
-    currentAudio = audio;
-    audio.onended = function() { playChunkWithAI(i + 1); };
-    audio.onerror = function() { speakWithBrowserVoice(chunkQueue.join(' ')); };
-    audio.play().catch(function() { speakWithBrowserVoice(chunkQueue.join(' ')); });
-  }
-
-  function speakWithBrowserVoice(text) {
-    var synth = window.speechSynthesis;
-    if (!synth) { speaking = false; updateBtn(); return; }
-    var voices = synth.getVoices() || [];
-    var ko = voices.filter(function(v) { return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; });
-    var female = ko.filter(function(v) { return /female|여성|유나|보라|서연|지민/i.test(v.name); });
-    var utter = new SpeechSynthesisUtterance(text.slice(0, 3000));
-    var voice = female[0] || ko[0];
-    if (voice) utter.voice = voice;
-    utter.lang = 'ko-KR';
-    utter.rate = 0.92;
-    utter.onend = function() { speaking = false; updateBtn(); };
-    utter.onerror = function() { speaking = false; updateBtn(); };
-    synth.cancel();
-    synth.speak(utter);
-  }
-
-  function speak() {
-    var text = extractReadableText();
-    if (!text) return;
-    speaking = true;
-    updateBtn();
-    chunkQueue = splitIntoChunks(text, 350);
-    playChunkWithAI(0);
-  }
-
-  window.__ttsToggle = function() {
-    if (speaking) { stop(); } else { speak(); }
-  };
-
-  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 "듣기" 버튼으로 수동 시작)
-  setTimeout(function() {
-    try { speak(); } catch (e) {}
-  }, 1000);
-})();
-</script>
 <div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:36%;left:81%;font-size:46px;opacity:0.07;transform:rotate(8deg);">🚴</span><span class="decor-item" style="top:86%;left:30%;font-size:47px;opacity:0.1;transform:rotate(-4deg);">🥑</span><span class="decor-item" style="top:35%;left:55%;font-size:54px;opacity:0.15;transform:rotate(-10deg);">🧘</span><span class="decor-item" style="top:84%;left:10%;font-size:35px;opacity:0.15;transform:rotate(-27deg);">🏃</span><span class="decor-item" style="top:41%;left:4%;font-size:29px;opacity:0.16;transform:rotate(-20deg);">🧘</span><span class="decor-item" style="top:32%;left:87%;font-size:32px;opacity:0.16;transform:rotate(9deg);">🏃</span><span class="decor-item" style="top:13%;left:56%;font-size:45px;opacity:0.09;transform:rotate(22deg);">🚴</span><span class="decor-item" style="top:76%;left:45%;font-size:57px;opacity:0.08;transform:rotate(-20deg);">🥑</span><span class="decor-item" style="top:73%;left:67%;font-size:58px;opacity:0.13;transform:rotate(-16deg);">🏃</span><span class="decor-item" style="top:92%;left:9%;font-size:53px;opacity:0.14;transform:rotate(18deg);">🏃</span><span class="decor-item" style="top:27%;left:51%;font-size:35px;opacity:0.09;transform:rotate(-28deg);">🥑</span></div>
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
@@ -284,10 +189,10 @@ function googleTranslateElementInit() {
 <h2>엘링 홀란드의 미래 전망</h2>
 <p>엘링 홀란드는 아직 20대 초반의 젊은 나이임에도 불구하고 이미 세계 최고의 공격수 반열에 올라섰습니다. 그의 꾸준함과 발전 가능성을 고려할 때, 앞으로 그가 축구 역사에 어떤 기록들을 남길지 귀추가 주목됩니다. 현재의 득점력을 유지한다면, 프리미어리그를 넘어 유럽 축구 전체의 새로운 득점 기록들을 갈아치울 잠재력을 충분히 가지고 있습니다.</p>
 <p>물론 부상 관리와 지속적인 기량 발전이 중요하겠지만, 홀란드가 보여주는 압도적인 퍼포먼스와 승리를 향한 열정은 그가 미래의 발롱도르 수상자이자 축구 역사의 전설적인 선수로 기억될 것이라는 기대를 갖게 합니다. 그는 이미 현대 축구에서 가장 영향력 있는 선수 중 한 명이며, 앞으로도 수많은 팬들을 열광시킬 것으로 예상됩니다.</p><p style="margin-top:2em;padding-top:1em;border-top:1px dashed #ddd;">🔗 이 글도 함께 보면 좋아요: <a href="../posts/홈트레이닝-2026-07-09.html">홈트레이닝 성공 가이드: 집에서 건강을 만드는 가장 현명한 방법</a></p><h2>관련 추천 상품</h2><p><a href="https://www.coupang.com/np/search?q=%EC%B6%95%EA%B5%AC%20%EC%9C%A0%EB%8B%88%ED%8F%BC" target="_blank" rel="nofollow sponsored">축구 유니폼 관련 인기 상품 보러가기</a></p><p style="font-size:0.85em;color:#888;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-<div class="post-nav"><a href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="이전 게시물"><span>← 이전 게시물: 야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
-<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a>
-<a class="related-card" href="../posts/백령도-2026-07-18.html"><img src="../thumbs/백령도-2026-07-18.webp" alt="서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬" loading="lazy"><span>서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬</span></a>
-<a class="related-card" href="../posts/김송-2026-07-18.html"><img src="../thumbs/김송-2026-07-18.webp" alt="김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황" loading="lazy"><span>김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황</span></a></div></div>
+<div class="post-nav"><a href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="이전 게시물"><span>← 이전 게시물: 카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
+<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징" loading="lazy"><span>카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a>
+<a class="related-card" href="../posts/손호영-2026-07-18.html"><img src="../thumbs/손호영-2026-07-18.webp" alt="가수 손호영 프로필 활동 요약 및 최신 근황" loading="lazy"><span>가수 손호영 프로필 활동 요약 및 최신 근황</span></a>
+<a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a></div></div>
 
 </div>
 </body>

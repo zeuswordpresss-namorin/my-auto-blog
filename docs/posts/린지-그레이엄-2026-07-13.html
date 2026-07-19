@@ -132,101 +132,6 @@ function googleTranslateElementInit() {
 }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-<div style="position:fixed;bottom:20px;right:20px;z-index:998;">
-  <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
-    style="border:none;border-radius:999px;background:#4a90d9;color:#fff;font-weight:700;
-    font-size:13px;padding:10px 16px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">듣기</button>
-</div>
-<script>
-(function() {
-  var speaking = false;
-  var currentAudio = null;
-  var chunkQueue = [];
-  var chunkIndex = 0;
-  var TTS_ENDPOINT = 'https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=';
-
-  function updateBtn() {
-    var btn = document.getElementById('tts-btn');
-    if (btn) btn.textContent = speaking ? '정지' : '듣기';
-  }
-
-  function extractReadableText() {
-    var content = document.querySelector('.content');
-    if (!content) return '';
-    var clone = content.cloneNode(true);
-    // 표는 항목이 뒤섞여 어색하게 들리므로 읽기 대상에서 제외
-    var strip = clone.querySelectorAll('table, button, script, style, .related, [id^="tblzoom"]');
-    strip.forEach(function(el) { el.remove(); });
-    return (clone.innerText || clone.textContent || '').trim();
-  }
-
-  function splitIntoChunks(text, maxLen) {
-    var chunks = [];
-    while (text.length > 0) {
-      var piece = text.slice(0, maxLen);
-      if (text.length > maxLen) {
-        var cut = Math.max(piece.lastIndexOf('.'), piece.lastIndexOf('\n'), piece.lastIndexOf('!'), piece.lastIndexOf('?'));
-        if (cut > 40) piece = text.slice(0, cut + 1);
-      }
-      chunks.push(piece);
-      text = text.slice(piece.length);
-    }
-    return chunks.slice(0, 20); // 너무 긴 글은 앞부분 위주로 (최대 약 8000자)
-  }
-
-  function stop() {
-    speaking = false;
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    updateBtn();
-  }
-
-  function playChunkWithAI(i) {
-    if (!speaking || i >= chunkQueue.length) { speaking = false; updateBtn(); return; }
-    var audio = new Audio(TTS_ENDPOINT + encodeURIComponent(chunkQueue[i]));
-    currentAudio = audio;
-    audio.onended = function() { playChunkWithAI(i + 1); };
-    audio.onerror = function() { speakWithBrowserVoice(chunkQueue.join(' ')); };
-    audio.play().catch(function() { speakWithBrowserVoice(chunkQueue.join(' ')); });
-  }
-
-  function speakWithBrowserVoice(text) {
-    var synth = window.speechSynthesis;
-    if (!synth) { speaking = false; updateBtn(); return; }
-    var voices = synth.getVoices() || [];
-    var ko = voices.filter(function(v) { return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; });
-    var female = ko.filter(function(v) { return /female|여성|유나|보라|서연|지민/i.test(v.name); });
-    var utter = new SpeechSynthesisUtterance(text.slice(0, 3000));
-    var voice = female[0] || ko[0];
-    if (voice) utter.voice = voice;
-    utter.lang = 'ko-KR';
-    utter.rate = 0.92;
-    utter.onend = function() { speaking = false; updateBtn(); };
-    utter.onerror = function() { speaking = false; updateBtn(); };
-    synth.cancel();
-    synth.speak(utter);
-  }
-
-  function speak() {
-    var text = extractReadableText();
-    if (!text) return;
-    speaking = true;
-    updateBtn();
-    chunkQueue = splitIntoChunks(text, 350);
-    playChunkWithAI(0);
-  }
-
-  window.__ttsToggle = function() {
-    if (speaking) { stop(); } else { speak(); }
-  };
-
-  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 "듣기" 버튼으로 수동 시작)
-  setTimeout(function() {
-    try { speak(); } catch (e) {}
-  }, 1000);
-})();
-</script>
 <div class="decor-layer" aria-hidden="true"><span class="decor-item" style="top:31%;left:6%;font-size:26px;opacity:0.14;transform:rotate(7deg);">🕊️</span><span class="decor-item" style="top:95%;left:54%;font-size:45px;opacity:0.09;transform:rotate(6deg);">☕</span><span class="decor-item" style="top:91%;left:21%;font-size:45px;opacity:0.1;transform:rotate(4deg);">🌸</span><span class="decor-item" style="top:60%;left:14%;font-size:43px;opacity:0.16;transform:rotate(-13deg);">🌿</span><span class="decor-item" style="top:69%;left:66%;font-size:57px;opacity:0.13;transform:rotate(-11deg);">🌿</span><span class="decor-item" style="top:49%;left:40%;font-size:47px;opacity:0.13;transform:rotate(6deg);">📓</span><span class="decor-item" style="top:33%;left:91%;font-size:45px;opacity:0.15;transform:rotate(20deg);">📓</span><span class="decor-item" style="top:78%;left:44%;font-size:27px;opacity:0.07;transform:rotate(6deg);">🌸</span><span class="decor-item" style="top:40%;left:33%;font-size:37px;opacity:0.15;transform:rotate(-6deg);">🎧</span><span class="decor-item" style="top:70%;left:18%;font-size:54px;opacity:0.13;transform:rotate(-1deg);">🌿</span></div>
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
@@ -269,10 +174,10 @@ function googleTranslateElementInit() {
 <p>최근에는 우크라이나 전쟁, 이스라엘-하마스 분쟁 등 국제 현안에 대해 적극적으로 목소리를 내며 미국의 역할론을 강조하고 있습니다. 그는 상원 내에서 영향력 있는 의원으로 분류되며, 미국의 대외 정책 방향 설정과 국내 정치 논쟁에 지속적으로 큰 영향을 미칠 것으로 전망됩니다. 다음 상원 선거가 다가옴에 따라 그의 정치적 행보와 발언은 더욱 주목받을 것입니다.</p>
 
 <p>린지 그레이엄 의원은 복잡한 미국 정치 지형 속에서 독특한 위치를 차지하며 중요한 역할을 수행하고 있습니다. 그의 과거와 현재 활동을 통해 우리는 미국 정치의 한 단면과 국제 정세에 대한 그의 관점을 이해할 수 있습니다.</p><p style="margin-top:2em;padding-top:1em;border-top:1px dashed #ddd;">🔗 이 글도 함께 보면 좋아요: <a href="../posts/스포티비뉴스-2026-07-10.html">스포티비뉴스 주요 콘텐츠 특징 보는 방법 활용 팁</a></p>
-<div class="post-nav"><a href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="이전 게시물"><span>← 이전 게시물: 야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
-<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a>
-<a class="related-card" href="../posts/백령도-2026-07-18.html"><img src="../thumbs/백령도-2026-07-18.webp" alt="서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬" loading="lazy"><span>서해 최북단 백령도 여행: 아름다운 자연과 역사의 섬</span></a>
-<a class="related-card" href="../posts/김송-2026-07-18.html"><img src="../thumbs/김송-2026-07-18.webp" alt="김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황" loading="lazy"><span>김송 강원래 부부의 굴곡진 인생 스토리와 최신 근황</span></a></div></div>
+<div class="post-nav"><a href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="이전 게시물"><span>← 이전 게시물: 카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a><a href="../index.html"><span class="nav-icon">📰</span><span>최신 게시물 보기</span></a></div>
+<div class="related"><h3>📌 함께 보면 좋은 글</h3><div class="related-grid"><a class="related-card" href="../posts/karmine-corp-2026-07-19.html"><img src="../thumbs/karmine-corp-2026-07-19.webp" alt="카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징" loading="lazy"><span>카르민 코프(Karmine Corp) e스포츠 팀: 역사, 주요 종목, 팬덤 특징</span></a>
+<a class="related-card" href="../posts/손호영-2026-07-18.html"><img src="../thumbs/손호영-2026-07-18.webp" alt="가수 손호영 프로필 활동 요약 및 최신 근황" loading="lazy"><span>가수 손호영 프로필 활동 요약 및 최신 근황</span></a>
+<a class="related-card" href="../posts/포수-2026-07-18.html"><img src="../thumbs/포수-2026-07-18.webp" alt="야구 포수 역할과 경기 승리 핵심 전략 완벽 분석" loading="lazy"><span>야구 포수 역할과 경기 승리 핵심 전략 완벽 분석</span></a></div></div>
 
 </div>
 </body>
