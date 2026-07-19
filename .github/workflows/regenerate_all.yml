@@ -45,7 +45,6 @@ jobs:
           ADSENSE_SLOT_ID: ${{ vars.ADSENSE_SLOT_ID }}
           GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
           ENABLE_AUTO_TRANSLATE: ${{ vars.ENABLE_AUTO_TRANSLATE }}
-          ENABLE_TTS: ${{ vars.ENABLE_TTS }}
         run: python regenerate_all_posts.py
 
       - name: 변경사항 커밋 및 push
