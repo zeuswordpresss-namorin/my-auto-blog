@@ -289,119 +289,6 @@ def _ga_snippet() -> str:
 ENABLE_AUTO_TRANSLATE = os.environ.get("ENABLE_AUTO_TRANSLATE", "true").strip().lower() != "false"
 
 
-ENABLE_TTS = os.environ.get("ENABLE_TTS", "true").strip().lower() != "false"
-
-
-def _build_tts_widget(accent: str, content_selector: str = ".content") -> str:
-    """상세페이지 진입 1초 후 본문(표 제외)을 자동으로 읽어주는 음성 안내 기능을 삽입합니다.
-    1순위로 무료 공개 TTS 엔드포인트(StreamElements, 아마존 폴리 '서연' 음성 - 브라우저 기본
-    음성보다 훨씬 자연스러운 사람 목소리에 가까움, API 키 불필요)를 사용하고, 실패하면
-    브라우저 내장 음성합성(Web Speech API)으로 자동 전환됩니다. 표는 그대로 읽으면 항목이
-    뒤섞여 어색하게 들리기 때문에 읽기 대상에서 제외합니다.
-    버튼 아이콘은 이모지 대신 한글 텍스트("듣기"/"정지")를 씁니다 — 일부 환경(블로거 발행 시
-    콘텐츠 처리 과정)에서 이모지가 깨진 문자로 표시되는 문제가 있어 안전하게 텍스트로 대체했습니다.
-    content_selector: 실제로 읽어야 할 본문 요소를 가리키는 CSS 선택자. GitHub Pages 페이지는
-    본문이 <div class="content">로 감싸여 있지만, 블로거는 그런 래퍼가 없어서 발행할 때
-    별도 id를 만들어 넘겨줘야 합니다 (안 그러면 아무것도 못 찾아서 조용히 아무 반응이 없음)."""
-    if not ENABLE_TTS:
-        return ""
-    return f"""
-<div style="position:fixed;bottom:20px;right:20px;z-index:998;">
-  <button id="tts-btn" type="button" onclick="window.__ttsToggle && window.__ttsToggle();"
-    style="border:none;border-radius:999px;background:{accent};color:#fff;font-weight:700;
-    font-size:13px;padding:10px 16px;box-shadow:0 3px 12px rgba(0,0,0,0.28);cursor:pointer;">듣기</button>
-</div>
-<script>
-(function() {{
-  var speaking = false;
-  var currentAudio = null;
-  var chunkQueue = [];
-  var chunkIndex = 0;
-  var TTS_ENDPOINT = 'https://api.streamelements.com/kappa/v2/speech?voice=Seoyeon&text=';
-
-  function updateBtn() {{
-    var btn = document.getElementById('tts-btn');
-    if (btn) btn.textContent = speaking ? '정지' : '듣기';
-  }}
-
-  function extractReadableText() {{
-    var content = document.querySelector('{content_selector}');
-    if (!content) return '';
-    var clone = content.cloneNode(true);
-    // 표는 항목이 뒤섞여 어색하게 들리므로 읽기 대상에서 제외
-    var strip = clone.querySelectorAll('table, button, script, style, .related, [id^="tblzoom"]');
-    strip.forEach(function(el) {{ el.remove(); }});
-    return (clone.innerText || clone.textContent || '').trim();
-  }}
-
-  function splitIntoChunks(text, maxLen) {{
-    var chunks = [];
-    while (text.length > 0) {{
-      var piece = text.slice(0, maxLen);
-      if (text.length > maxLen) {{
-        var cut = Math.max(piece.lastIndexOf('.'), piece.lastIndexOf('\\n'), piece.lastIndexOf('!'), piece.lastIndexOf('?'));
-        if (cut > 40) piece = text.slice(0, cut + 1);
-      }}
-      chunks.push(piece);
-      text = text.slice(piece.length);
-    }}
-    return chunks.slice(0, 20); // 너무 긴 글은 앞부분 위주로 (최대 약 8000자)
-  }}
-
-  function stop() {{
-    speaking = false;
-    if (currentAudio) {{ currentAudio.pause(); currentAudio = null; }}
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    updateBtn();
-  }}
-
-  function playChunkWithAI(i) {{
-    if (!speaking || i >= chunkQueue.length) {{ speaking = false; updateBtn(); return; }}
-    var audio = new Audio(TTS_ENDPOINT + encodeURIComponent(chunkQueue[i]));
-    currentAudio = audio;
-    audio.onended = function() {{ playChunkWithAI(i + 1); }};
-    audio.onerror = function() {{ speakWithBrowserVoice(chunkQueue.join(' ')); }};
-    audio.play().catch(function() {{ speakWithBrowserVoice(chunkQueue.join(' ')); }});
-  }}
-
-  function speakWithBrowserVoice(text) {{
-    var synth = window.speechSynthesis;
-    if (!synth) {{ speaking = false; updateBtn(); return; }}
-    var voices = synth.getVoices() || [];
-    var ko = voices.filter(function(v) {{ return v.lang && v.lang.toLowerCase().indexOf('ko') === 0; }});
-    var female = ko.filter(function(v) {{ return /female|여성|유나|보라|서연|지민/i.test(v.name); }});
-    var utter = new SpeechSynthesisUtterance(text.slice(0, 3000));
-    var voice = female[0] || ko[0];
-    if (voice) utter.voice = voice;
-    utter.lang = 'ko-KR';
-    utter.rate = 0.92;
-    utter.onend = function() {{ speaking = false; updateBtn(); }};
-    utter.onerror = function() {{ speaking = false; updateBtn(); }};
-    synth.cancel();
-    synth.speak(utter);
-  }}
-
-  function speak() {{
-    var text = extractReadableText();
-    if (!text) return;
-    speaking = true;
-    updateBtn();
-    chunkQueue = splitIntoChunks(text, 350);
-    playChunkWithAI(0);
-  }}
-
-  window.__ttsToggle = function() {{
-    if (speaking) {{ stop(); }} else {{ speak(); }}
-  }};
-
-  // 상세페이지 진입 1초 후 자동으로 읽기 시작 (브라우저 정책상 차단되면 "듣기" 버튼으로 수동 시작)
-  setTimeout(function() {{
-    try {{ speak(); }} catch (e) {{}}
-  }}, 1000);
-}})();
-</script>"""
-
-
 
 def _translate_widget() -> str:
     """구글 번역 위젯(무료, API 키 불필요)을 삽입합니다.
@@ -644,7 +531,6 @@ POST_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 {translate_widget}
-{tts_widget}
 {decor_html}
 <div class="content">
 <a class="back" href="../index.html">← 목록으로</a>
@@ -1549,7 +1435,6 @@ def save_post(article: dict):
         bottom_ad=_manual_ad_unit(),
         search_console_meta=_search_console_meta(),
         translate_widget=_translate_widget(),
-        tts_widget=_build_tts_widget(theme["accent"]),
     )
     with open(os.path.join(POSTS_DIR, post_filename), "w", encoding="utf-8") as f:
         f.write(html)
@@ -1809,13 +1694,10 @@ def publish_to_blogger(article: dict, canonical_url: str, thumb_url: str, local_
 
         content_html = (
             f'{_translate_widget()}'
-            f'<div id="blogger-tts-content">'
             f'<img src="{img_src}" style="max-width:100%;border-radius:8px;" alt="{article["title"]}">'
             f'<span style="display:inline-block;background:{theme["accent"]};color:#fff;font-size:0.85em;'
             f'font-weight:bold;padding:4px 12px;border-radius:999px;margin:14px 0 4px;">{theme["badge"]}</span>'
             f'{_make_blogger_safe_html(article["html_body"])}'
-            f'</div>'
-            f'{_build_tts_widget(theme["accent"], content_selector="#blogger-tts-content")}'
             f'<script type="application/ld+json">{blogger_json_ld}</script>'
         )
 
