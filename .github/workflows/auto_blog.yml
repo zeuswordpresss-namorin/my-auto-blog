@@ -51,7 +51,6 @@ jobs:
           SITE_TAGLINE: ${{ vars.SITE_TAGLINE }}
           GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
           ENABLE_AUTO_TRANSLATE: ${{ vars.ENABLE_AUTO_TRANSLATE }}
-          ENABLE_TTS: ${{ vars.ENABLE_TTS }}
           SITE_URL: ${{ vars.SITE_URL }}
           GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
           ADSENSE_CLIENT_ID: ${{ vars.ADSENSE_CLIENT_ID }}
