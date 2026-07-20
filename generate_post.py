@@ -17,6 +17,8 @@ v4에서 추가된 것 (저장소 통합):
 
 [업그레이드 내역]
   - 썸네일 이미지 생성 시 사용자가 지정한 'Torn-paper collage' 프롬프트 적용
+  - 사람 얼굴 노출 방지 및 추상적 상징 표현 강화
+  - 테이블 렌더링 시 좌측 상단 불필요한 빈칸 레이아웃 오류 수정
 """
 
 import base64
@@ -644,17 +646,16 @@ def _hex_to_rgb(hex_color: str):
 
 def _fetch_thumbnail_bg(scene: str, size: tuple, seed: int):
     """
-    사용자가 지정한 Torn-paper collage 프롬프트로 썸네일 아트워크를 생성합니다.
-    제목(title)을 기반으로 SCENE을 교체하여 요청합니다.
+    [수정사항] 사람 얼굴 노출 금지 및 추상적 개념 위주로 콜라주를 생성하도록 프롬프트 업데이트
     """
     prompt = (
-        f"Create a handcrafted torn-paper collage artwork of {scene}. "
-        "Reconstruct the entire scene with hand-torn fragments of magazines, catalogs, and flyers. "
-        "Use mostly medium and large irregular paper pieces with visible torn fibers, wrinkles, printed ink, folds, lifted edges, glue marks, overlapping layers, and soft contact shadows. "
-        "Keep the subjects, expressions, actions, background, charcoal sketch, lighting, and spatial relationships clear and recognizable. "
-        "Arrange the paper pieces at varied angles so the result feels physically handmade, imperfect, and photographed under soft studio light. "
-        "Avoid tiny mosaic pieces, uniform tiles, smooth digital cutouts, vector edges, painted textures, CGI, sepia, and excessive yellow tones. "
-        "monochrome, black and white, high contrast, dramatic lighting, dusty grainy texture, charcoal dust, smudged shadows, blended edges, textured drawing paper, sketchbook texture, all opacity 10%"
+        f"Create a conceptual handcrafted torn-paper collage artwork representing '{scene}'. "
+        "Focus on abstract shapes, symbolic objects, and typography related to the topic. "
+        "STRICTLY NO human faces, NO portraits, NO characters, NO people. "
+        "Use mostly medium and large irregular paper pieces with visible torn fibers, wrinkles, printed ink, folds, lifted edges, and soft contact shadows. "
+        "Arrange the pieces at varied angles so the result feels physically handmade and imperfect. "
+        "Avoid tiny mosaic pieces, uniform tiles, smooth digital cutouts, vector edges, CGI, and human features. "
+        "monochrome, minimal, high quality, soft studio light."
     )
     url = (
         f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}"
@@ -703,11 +704,9 @@ def _wrap_by_pixel_width(draw, text: str, font, max_width: int) -> list:
 def generate_thumbnail(title: str, output_path: str, theme: dict, category: str = "라이프스타일") -> None:
     img = _make_gradient_background(THUMB_SIZE, theme["gradient"]).convert("RGBA")
 
-    # --- 새롭게 찢어진 종이 콜라주 아트워크를 배경으로 합성 ---
     seed = int(hashlib.md5(title.encode("utf-8")).hexdigest(), 16) % 100000
     illustration = _fetch_thumbnail_bg(title, THUMB_SIZE, seed)
     if illustration is not None:
-        # 프롬프트의 아트 감성이 묻어나도록 약간의 블렌드 적용 (기존 0.10 -> 0.15 상향)
         img = Image.blend(img, illustration, alpha=0.15)
 
     draw = ImageDraw.Draw(img)
@@ -912,8 +911,16 @@ def _fetch_content_photo(category: str, seed: int, size=(1000, 560)):
 def enhance_tables(html_body: str, accent: str) -> str:
     counter = {"n": 0}
     def _style_cells(raw_table: str, min_width: int) -> str:
+        # [수정사항] 표 좌측 상단에 빈 th(제목칸)가 있을 경우, 파란색 배경을 주지 않고 투명하게 넘기도록 처리
+        raw_table = re.sub(r"<th([^>]*)>\s*(?:&nbsp;|<br>)*\s*</th>", r"<th\1 data-empty=\"true\"></th>", raw_table)
+        
         styled = re.sub(r"<table(?![^>]*style=)", f'<table style="width:100%;min-width:{min_width}px;border-collapse:collapse;"', raw_table, count=1)
+        
+        # 빈칸인 th는 스타일 없애기
+        styled = re.sub(r"<th[^>]*data-empty=\"true\"[^>]*></th>", '<th style="padding:12px 14px;background:transparent;border:none;"></th>', styled)
+        # 일반 th 스타일
         styled = re.sub(r"<th(?![^>]*style=)", f'<th style="padding:12px 14px;text-align:left;background:{accent}1f;font-weight:800;color:#111;border-bottom:2px solid {accent}80;white-space:nowrap;"', styled)
+        
         styled = re.sub(r"<td(?![^>]*style=)", '<td style="padding:12px 14px;text-align:left;border-bottom:1px solid #ececec;line-height:1.65;vertical-align:top;"', styled)
         return styled
 
@@ -1288,3 +1295,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[오류] {e}")
         sys.exit(1)
+
