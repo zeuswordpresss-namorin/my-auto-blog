@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
 Sitemap: https://zeuswordpresss-namorin.github.io/my-auto-blog/sitemap.xml
